@@ -1,10 +1,24 @@
 import bcrypt from "bcryptjs";
 import { db } from "@/lib/db";
+import { ensureDemoUsers } from "@/lib/auth/ensure-demo";
 import { createSession, setActiveOrg } from "@/lib/session";
 
+const DEMO_EMAILS = new Set(["demo@geodraftly.app", "marcus@geodraftly.app", "client@geodraftly.app"]);
+
 export async function authenticateUser(email: string, password: string) {
+  const normalized = email.toLowerCase().trim();
+
+  if (DEMO_EMAILS.has(normalized) && password === "demo1234") {
+    try {
+      await ensureDemoUsers();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Could not create demo users.";
+      return { error: message };
+    }
+  }
+
   const user = await db.user.findFirst({
-    where: { email: email.toLowerCase().trim(), deletedAt: null },
+    where: { email: normalized, deletedAt: null },
     include: { memberships: true },
   });
   if (!user) return { error: "Invalid email or password." as const };
