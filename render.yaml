@@ -10,7 +10,7 @@ services:
     runtime: node
     plan: starter
     buildCommand: npm ci && npm run build
-    preDeployCommand: npx prisma db push
+    preDeployCommand: npx prisma db push && npm run db:seed
     startCommand: npm start
     initialDeployHook: npm run db:seed
     envVars:

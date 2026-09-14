@@ -96,13 +96,30 @@ export const authService = {
   },
 
   async login(email: string, password: string): Promise<AuthSession> {
-    // TODO: Replace this mock with your backend.
-    // Supabase: const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-    // Firebase: await signInWithEmailAndPassword(auth, email, password)
-    // NextAuth: await signIn("credentials", { email, password, redirect: false })
     await delay();
+    const normalized = email.toLowerCase().trim();
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: normalized, password }),
+        credentials: "include",
+      });
+      const data = (await res.json()) as { user?: AuthUser; sessionToken?: string; error?: string };
+      if (res.ok && data.user) {
+        const session = { user: { ...data.user, provider: "cookie" as const }, sessionToken: data.sessionToken ?? "cookie" };
+        this.writeSession(session);
+        return session;
+      }
+      if (res.status === 401) {
+        throw new Error(data.error || "Invalid email or password.");
+      }
+    } catch (error) {
+      if (error instanceof Error && error.message === "Invalid email or password.") throw error;
+    }
+
     const users = readUsers();
-    const match = users.find((u) => u.email === email.toLowerCase().trim());
+    const match = users.find((u) => u.email === normalized);
     if (!match || match.password !== password) {
       throw new Error("Invalid email or password.");
     }

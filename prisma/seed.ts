@@ -29,19 +29,19 @@ async function main() {
 
   const ava = await db.user.upsert({
     where: { email: "demo@geodraftly.app" },
-    update: {},
+    update: { passwordHash, name: "Ava Chen" },
     create: { email: "demo@geodraftly.app", name: "Ava Chen", passwordHash },
   });
 
   const marcus = await db.user.upsert({
     where: { email: "marcus@geodraftly.app" },
-    update: {},
+    update: { passwordHash, name: "Marcus Hale" },
     create: { email: "marcus@geodraftly.app", name: "Marcus Hale", passwordHash },
   });
 
   const jordan = await db.user.upsert({
     where: { email: "client@geodraftly.app" },
-    update: {},
+    update: { passwordHash, name: "Jordan Hale" },
     create: { email: "client@geodraftly.app", name: "Jordan Hale", passwordHash },
   });
 

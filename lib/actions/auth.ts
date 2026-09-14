@@ -5,6 +5,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { logActivity } from "@/lib/activity";
 import { requireUser } from "@/lib/auth";
+import { authenticateUser } from "@/lib/auth/credentials";
 import { consumePasswordReset, createPasswordReset, originFromHeaders } from "@/lib/auth/password-reset";
 import { db } from "@/lib/db";
 import { createSession, destroySession, setActiveOrg } from "@/lib/session";
@@ -81,18 +82,8 @@ export async function loginAction(_: unknown, formData: FormData) {
       email: String(formData.get("email") ?? "").toLowerCase().trim(),
       password: formData.get("password"),
     });
-
-    const user = await db.user.findFirst({
-      where: { email: parsed.email, deletedAt: null },
-      include: { memberships: true },
-    });
-    if (!user) return { error: "Invalid email or password." };
-
-    const ok = await bcrypt.compare(parsed.password, user.passwordHash);
-    if (!ok) return { error: "Invalid email or password." };
-
-    await createSession({ userId: user.id, email: user.email, name: user.name });
-    if (user.memberships[0]) await setActiveOrg(user.memberships[0].organizationId);
+    const result = await authenticateUser(parsed.email, parsed.password);
+    if ("error" in result) return { error: result.error };
   } catch (error) {
     return { error: formError(error) };
   }
