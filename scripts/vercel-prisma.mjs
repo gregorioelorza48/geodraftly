@@ -23,9 +23,7 @@ const resolvedUrl = [
   .map((value) => value?.trim() ?? "")
   .find(Boolean);
 
-if (resolvedUrl && !process.env.DATABASE_URL?.trim()) {
-  process.env.DATABASE_URL = resolvedUrl;
-}
+if (resolvedUrl) process.env.DATABASE_URL = resolvedUrl;
 
 const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
@@ -36,39 +34,25 @@ const onHosted = Boolean(
     process.env.RAILWAY_SERVICE_ID,
 );
 const isPostgres = /^(postgres(ql)?|prisma\+postgres)/i.test(databaseUrl);
-const isSqliteFile = databaseUrl.startsWith("file:");
+const generateUrl =
+  isPostgres || onHosted ? databaseUrl || "postgresql://postgres:postgres@127.0.0.1:5432/railway" : databaseUrl || "file:./dev.db";
 
-if (onHosted && (!databaseUrl || isSqliteFile)) {
-  console.error(`
-Geodraftly needs Postgres in production (SQLite is local-only).
-
-Add a Postgres database on Railway or Vercel, set:
-
-  DATABASE_URL   postgresql://...   (not file:./dev.db)
-  SESSION_SECRET a long random string
-
-Then redeploy.
-`);
-  process.exit(1);
-}
-
-if (!databaseUrl) {
-  console.warn("DATABASE_URL is not set; Prisma generate may fail.");
-}
-
-if (isPostgres) {
+if (onHosted || isPostgres) {
   const schema = fs.readFileSync(schemaPath, "utf8");
   const next = schema.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
-  if (next === schema) {
-    console.log("Prisma schema already uses postgresql.");
-  } else {
+  if (next !== schema) {
     fs.writeFileSync(schemaPath, next);
     console.log("Prisma provider set to postgresql for this build.");
   }
 }
 
-execSync("npx prisma generate", { stdio: "inherit" });
+execSync("npx prisma generate", {
+  stdio: "inherit",
+  env: { ...process.env, DATABASE_URL: generateUrl },
+});
 
 if (isPostgres) {
   execSync("npx prisma db push", { stdio: "inherit" });
+} else if (onHosted) {
+  console.warn("DATABASE_URL is not available at build time. Tables will be created on pre-deploy / first start.");
 }
