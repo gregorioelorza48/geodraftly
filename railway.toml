@@ -1,3 +1,2 @@
 [deploy]
-preDeployCommand = "npx prisma db push && npm run db:seed"
-startCommand = "npm start"
+startCommand = "node scripts/hosted-start.mjs"
