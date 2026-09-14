@@ -9,7 +9,7 @@ services:
     name: geodraftly
     runtime: node
     plan: starter
-    buildCommand: npm ci && npm run build
+    buildCommand: npm install && npm run build
     preDeployCommand: npx prisma db push && npm run db:seed
     startCommand: npm start
     initialDeployHook: npm run db:seed

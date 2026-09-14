@@ -23,7 +23,12 @@ export function getDatabaseUrl() {
     process.env.POSTGRES_PRISMA_URL,
     fromPieces(),
   ];
-  return candidates.map((value) => value?.trim() ?? "").find(Boolean) ?? "";
+  const found = candidates.map((value) => value?.trim() ?? "").find(Boolean) ?? "";
+  if (!found) return "";
+  if (/^postgres(ql)?:/i.test(found) && !/[?&]sslmode=/i.test(found)) {
+    return found.includes("?") ? `${found}&sslmode=require` : `${found}?sslmode=require`;
+  }
+  return found;
 }
 
 export function applyDatabaseUrl() {

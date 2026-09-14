@@ -275,8 +275,9 @@ async function main() {
     },
   });
 
-  const photoKey = `projects/${riverbend.id}/photos/seed-playground.svg`;
-  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
+  try {
+    const photoKey = `projects/${riverbend.id}/photos/seed-playground.svg`;
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800">
   <rect width="1200" height="800" fill="#cfc8b6"/>
   <rect x="0" y="520" width="1200" height="280" fill="#8a9a7a"/>
   <rect x="80" y="300" width="420" height="260" fill="#d4a574" opacity="0.85"/>
@@ -284,62 +285,65 @@ async function main() {
   <rect x="880" y="350" width="40" height="180" fill="#5a4030"/>
   <text x="80" y="80" font-size="28" fill="#1c211e" font-family="Georgia">Riverbend Park — west play bay</text>
 </svg>`;
-  await putFile(photoKey, Buffer.from(svg), "image/svg+xml");
-  await db.photo.upsert({
-    where: { id: "seed-photo-1" },
-    update: {},
-    create: {
-      id: "seed-photo-1",
-      projectId: riverbend.id,
-      siteVisitId: visit.id,
-      observationId: "seed-obs-1",
-      uploadedById: ava.id,
-      fileKey: photoKey,
-      contentType: "image/svg+xml",
-      caption: "West play bay — existing surfacing",
-    },
-  });
+    await putFile(photoKey, Buffer.from(svg), "image/svg+xml");
+    await db.photo.upsert({
+      where: { id: "seed-photo-1" },
+      update: {},
+      create: {
+        id: "seed-photo-1",
+        projectId: riverbend.id,
+        siteVisitId: visit.id,
+        observationId: "seed-obs-1",
+        uploadedById: ava.id,
+        fileKey: photoKey,
+        contentType: "image/svg+xml",
+        caption: "West play bay — existing surfacing",
+      },
+    });
 
-  await db.pinComment.upsert({
-    where: { id: "seed-pin-photo-1" },
-    update: {},
-    create: {
-      id: "seed-pin-photo-1",
-      projectId: riverbend.id,
-      authorId: ava.id,
-      kind: "PHOTO",
-      body: "Geotextile is exposed here. This is the area we flagged for replacement.",
-      photoId: "seed-photo-1",
-      x: 0.28,
-      y: 0.48,
-    },
-  });
-  await db.pinComment.upsert({
-    where: { id: "seed-pin-photo-2" },
-    update: {},
-    create: {
-      id: "seed-pin-photo-2",
-      projectId: riverbend.id,
-      authorId: jordan.id,
-      kind: "PHOTO",
-      body: "Parks agrees — please include this bay in the addendum.",
-      photoId: "seed-photo-1",
-      parentId: "seed-pin-photo-1",
-    },
-  });
-  await db.pinComment.upsert({
-    where: { id: "seed-pin-map-1" },
-    update: {},
-    create: {
-      id: "seed-pin-map-1",
-      projectId: riverbend.id,
-      authorId: marcus.id,
-      kind: "MAP",
-      body: "Can we walk this corner with Parks on the next visit? Access from Ballard looks tight.",
-      latitude: 42.0414,
-      longitude: -87.8215,
-    },
-  });
+    await db.pinComment.upsert({
+      where: { id: "seed-pin-photo-1" },
+      update: {},
+      create: {
+        id: "seed-pin-photo-1",
+        projectId: riverbend.id,
+        authorId: ava.id,
+        kind: "PHOTO",
+        body: "Geotextile is exposed here. This is the area we flagged for replacement.",
+        photoId: "seed-photo-1",
+        x: 0.28,
+        y: 0.48,
+      },
+    });
+    await db.pinComment.upsert({
+      where: { id: "seed-pin-photo-2" },
+      update: {},
+      create: {
+        id: "seed-pin-photo-2",
+        projectId: riverbend.id,
+        authorId: jordan.id,
+        kind: "PHOTO",
+        body: "Parks agrees — please include this bay in the addendum.",
+        photoId: "seed-photo-1",
+        parentId: "seed-pin-photo-1",
+      },
+    });
+    await db.pinComment.upsert({
+      where: { id: "seed-pin-map-1" },
+      update: {},
+      create: {
+        id: "seed-pin-map-1",
+        projectId: riverbend.id,
+        authorId: marcus.id,
+        kind: "MAP",
+        body: "Can we walk this corner with Parks on the next visit? Access from Ballard looks tight.",
+        latitude: 42.0414,
+        longitude: -87.8215,
+      },
+    });
+  } catch (error) {
+    console.warn("Seed demo photo/comments skipped:", error);
+  }
 
   await db.activity.createMany({
     data: [

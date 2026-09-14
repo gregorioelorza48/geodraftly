@@ -2,7 +2,12 @@ import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth";
 
 export default async function LandingPage() {
-  const current = await getCurrentUser();
+  let current = null;
+  try {
+    current = await getCurrentUser();
+  } catch {
+    current = null;
+  }
 
   return (
     <div className="min-h-screen bg-paper">

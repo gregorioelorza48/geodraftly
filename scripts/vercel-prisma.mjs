@@ -52,8 +52,12 @@ execSync("npx prisma generate", {
   env: { ...process.env, DATABASE_URL: generateUrl },
 });
 
-if (isPostgres) {
+// Render's build network cannot reach the internal Postgres hostname.
+// Tables are created in pre-deploy instead (render.yaml / railway.toml).
+if (isPostgres && !process.env.RENDER) {
   execSync("npx prisma db push", { stdio: "inherit" });
+} else if (process.env.RENDER) {
+  console.log("Skipping prisma db push during Render build; pre-deploy will create tables.");
 } else if (onHosted) {
   console.warn("DATABASE_URL is not available at build time. Tables will be created on pre-deploy / first start.");
 }
