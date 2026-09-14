@@ -1,8 +1,28 @@
-import { PrismaClient } from "@prisma/client";
+import { execSync } from "node:child_process";
+import fs from "node:fs";
+import path from "node:path";
+import "../lib/db-env";
 import bcrypt from "bcryptjs";
+import { getDatabaseUrl } from "../lib/db-env";
 import { putFile } from "../lib/storage";
 
-const db = new PrismaClient();
+const databaseUrl = getDatabaseUrl();
+if (!databaseUrl) {
+  throw new Error(
+    "DATABASE_URL is missing in this shell. On the website service Variables add DATABASE_URL=${{Postgres.DATABASE_URL}}, or run: export DATABASE_URL='(copy from Postgres → Variables → DATABASE_URL)' && npm run db:seed",
+  );
+}
+
+if (/^postgres(ql)?:/i.test(databaseUrl)) {
+  const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
+  const schema = fs.readFileSync(schemaPath, "utf8");
+  const next = schema.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+  if (next !== schema) fs.writeFileSync(schemaPath, next);
+  execSync("npx prisma generate", { stdio: "inherit" });
+}
+
+const { PrismaClient } = await import("@prisma/client");
+const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 
 async function main() {
   const passwordHash = await bcrypt.hash("demo1234", 12);

@@ -29,7 +29,12 @@ if (resolvedUrl && !process.env.DATABASE_URL?.trim()) {
 
 const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
-const onHosted = Boolean(process.env.VERCEL || process.env.RAILWAY_ENVIRONMENT);
+const onHosted = Boolean(
+  process.env.VERCEL ||
+    process.env.RAILWAY_ENVIRONMENT ||
+    process.env.RAILWAY_PROJECT_ID ||
+    process.env.RAILWAY_SERVICE_ID,
+);
 const isPostgres = /^(postgres(ql)?|prisma\+postgres)/i.test(databaseUrl);
 const isSqliteFile = databaseUrl.startsWith("file:");
 
