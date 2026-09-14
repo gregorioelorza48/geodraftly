@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+@theme {
+  --font-sans: var(--font-sans), "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-serif: var(--font-serif), "Source Serif 4", ui-serif, Georgia, serif;
+
+  --color-ink: #1c211e;
+  --color-ink-soft: #3d4540;
+  --color-field: #2f4a3c;
+  --color-field-deep: #22362c;
+  --color-paper: #f4f1ea;
+  --color-paper-2: #ebe6db;
+  --color-brass: #b8924a;
+  --color-brass-deep: #8c6d2f;
+  --color-clay: #a24b32;
+  --color-sage: #6d8a73;
+  --color-line: #d8d2c4;
+  --color-white: #fffcf7;
+}
+
+html,
+body {
+  background: var(--color-paper);
+  color: var(--color-ink);
+}
+
+body {
+  font-feature-settings: "ss01" on, "kern" on;
+}
+
+::selection {
+  background: #d9c48a;
+  color: var(--color-ink);
+}
+
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+.leaflet-container {
+  font-family: inherit;
+  background: #e6e2d8;
+}

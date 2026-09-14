@@ -1,0 +1,371 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Local default is SQLite so the app runs without Docker/Postgres.
+// Production target is PostgreSQL — change provider to "postgresql"
+// and point DATABASE_URL at a managed instance. Types used here are
+// portable across both.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String    @id @default(cuid())
+  email        String    @unique
+  name         String
+  passwordHash String
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  deletedAt    DateTime?
+
+  memberships             OrganizationMember[]
+  projectMemberships      ProjectMember[]
+  observedVisits          SiteVisit[]          @relation("VisitObserver")
+  authoredObservations    Observation[]
+  uploadedPhotos          Photo[]
+  comments                Comment[]
+  createdIssues           Issue[]              @relation("IssueCreatedBy")
+  assignedIssues          Issue[]              @relation("IssueAssignee")
+  createdTasks            Task[]               @relation("TaskCreatedBy")
+  assignedTasks           Task[]               @relation("TaskAssignee")
+  generatedReports        GeneratedReport[]
+  activities              Activity[]
+  pinComments             PinComment[]
+  importedSurveyPoints    SurveyPoint[]
+  passwordResets          PasswordResetToken[]
+}
+
+model Organization {
+  id        String    @id @default(cuid())
+  name      String
+  slug      String    @unique
+  legalName String?
+  email     String?
+  phone     String?
+  website   String?
+  address   String?
+  logoKey   String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  members         OrganizationMember[]
+  projects        Project[]
+  reportTemplates ReportTemplate[]
+  activities      Activity[]
+}
+
+model OrganizationMember {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role           String           @default("MEMBER")
+  createdAt      DateTime         @default(now())
+
+  @@unique([organizationId, userId])
+  @@index([userId])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  number         String
+  client         String
+  address        String
+  city           String        @default("")
+  state          String        @default("")
+  postalCode     String        @default("")
+  latitude       Float?
+  longitude      Float?
+  type           String
+  status         String        @default("ACTIVE")
+  description    String        @default("")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  members      ProjectMember[]
+  siteVisits   SiteVisit[]
+  observations Observation[]
+  issues       Issue[]
+  tasks        Task[]
+  photos       Photo[]
+  reports      GeneratedReport[]
+  activities   Activity[]
+  pinComments  PinComment[]
+  surveyPoints SurveyPoint[]
+
+  @@unique([organizationId, number])
+  @@index([organizationId, status])
+}
+
+model ProjectMember {
+  id        String      @id @default(cuid())
+  projectId String
+  project   Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      String      @default("MEMBER")
+  createdAt DateTime    @default(now())
+
+  @@unique([projectId, userId])
+  @@index([userId])
+}
+
+model SiteVisit {
+  id              String          @id @default(cuid())
+  projectId       String
+  project         Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  observerId      String
+  observer        User            @relation("VisitObserver", fields: [observerId], references: [id])
+  visitedAt       DateTime
+  weather         String          @default("")
+  temperatureF    Float?
+  notes           String          @default("")
+  recommendations String          @default("")
+  status          String          @default("DRAFT")
+  completedAt     DateTime?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  deletedAt       DateTime?
+
+  observations Observation[]
+  photos       Photo[]
+  issues       Issue[]
+  reports      GeneratedReport[]
+
+  @@index([projectId, visitedAt])
+  @@index([observerId])
+}
+
+model Observation {
+  id          String              @id @default(cuid())
+  projectId   String
+  project     Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteVisitId String
+  siteVisit   SiteVisit           @relation(fields: [siteVisitId], references: [id], onDelete: Cascade)
+  authorId    String
+  author      User                @relation(fields: [authorId], references: [id])
+  title       String
+  description String              @default("")
+  category    String
+  priority    String              @default("MEDIUM")
+  status      String              @default("OPEN")
+  latitude    Float?
+  longitude   Float?
+  recordedAt  DateTime            @default(now())
+  createdAt   DateTime            @default(now())
+  updatedAt   DateTime            @updatedAt
+  deletedAt   DateTime?
+
+  photos   Photo[]
+  comments Comment[]
+  issues   Issue[]
+
+  @@index([projectId, recordedAt])
+  @@index([siteVisitId])
+  @@index([category, status])
+}
+
+model Photo {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteVisitId   String?
+  siteVisit     SiteVisit?   @relation(fields: [siteVisitId], references: [id], onDelete: Cascade)
+  observationId String?
+  observation   Observation? @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  uploadedById  String
+  uploadedBy    User         @relation(fields: [uploadedById], references: [id])
+  fileKey       String
+  contentType   String
+  caption       String       @default("")
+  createdAt     DateTime     @default(now())
+  deletedAt     DateTime?
+
+  pinComments PinComment[]
+
+  @@index([projectId])
+  @@index([siteVisitId])
+  @@index([observationId])
+}
+
+model Comment {
+  id            String       @id @default(cuid())
+  authorId      String
+  author        User         @relation(fields: [authorId], references: [id])
+  body          String
+  observationId String?
+  observation   Observation? @relation(fields: [observationId], references: [id], onDelete: Cascade)
+  issueId       String?
+  issue         Issue?       @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  createdAt     DateTime     @default(now())
+  deletedAt     DateTime?
+
+  @@index([observationId])
+  @@index([issueId])
+}
+
+// Live discussion pins on a photograph (x/y in 0–1 image space) or the project map.
+model PinComment {
+  id        String   @id @default(cuid())
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id])
+  kind      String
+  body      String
+  photoId   String?
+  photo     Photo?   @relation(fields: [photoId], references: [id], onDelete: Cascade)
+  x         Float?
+  y         Float?
+  latitude  Float?
+  longitude Float?
+  parentId  String?
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  @@index([projectId, createdAt])
+  @@index([photoId])
+  @@index([kind, projectId])
+}
+
+model SurveyPoint {
+  id           String   @id @default(cuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  importedById String
+  importedBy   User     @relation(fields: [importedById], references: [id])
+  pointNumber  String
+  latitude     Float
+  longitude    Float
+  elevation    Float?
+  description  String   @default("")
+  category     String   @default("")
+  sourceFile   String   @default("")
+  createdAt    DateTime @default(now())
+
+  @@index([projectId])
+}
+
+model Issue {
+  id            String      @id @default(cuid())
+  projectId     String
+  project       Project     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteVisitId   String?
+  siteVisit     SiteVisit?  @relation(fields: [siteVisitId], references: [id], onDelete: SetNull)
+  observationId String?
+  observation   Observation? @relation(fields: [observationId], references: [id], onDelete: SetNull)
+  createdById   String
+  createdBy     User        @relation("IssueCreatedBy", fields: [createdById], references: [id])
+  assigneeId    String?
+  assignee      User?       @relation("IssueAssignee", fields: [assigneeId], references: [id])
+  title         String
+  description   String      @default("")
+  status        String      @default("OPEN")
+  priority      String      @default("MEDIUM")
+  dueDate       DateTime?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  deletedAt     DateTime?
+
+  comments Comment[]
+  tasks    Task[]
+
+  @@index([projectId, status])
+  @@index([assigneeId])
+}
+
+model Task {
+  id          String     @id @default(cuid())
+  projectId   String
+  project     Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  issueId     String?
+  issue       Issue?     @relation(fields: [issueId], references: [id], onDelete: SetNull)
+  createdById String
+  createdBy   User       @relation("TaskCreatedBy", fields: [createdById], references: [id])
+  assigneeId  String?
+  assignee    User?      @relation("TaskAssignee", fields: [assigneeId], references: [id])
+  title       String
+  description String     @default("")
+  status      String     @default("TODO")
+  dueDate     DateTime?
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  deletedAt   DateTime?
+
+  @@index([projectId, status])
+  @@index([assigneeId])
+}
+
+model ReportTemplate {
+  id                      String       @id @default(cuid())
+  organizationId          String
+  organization            Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name                    String
+  isDefault               Boolean      @default(false)
+  headerNote              String       @default("")
+  footerNote              String       @default("")
+  includePhotos           Boolean      @default(true)
+  includeMapNote          Boolean      @default(true)
+  includeIssues           Boolean      @default(true)
+  includeRecommendations  Boolean      @default(true)
+  createdAt               DateTime     @default(now())
+  updatedAt               DateTime     @updatedAt
+
+  reports GeneratedReport[]
+}
+
+model GeneratedReport {
+  id            String       @id @default(cuid())
+  projectId     String
+  project       Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  siteVisitId   String
+  siteVisit     SiteVisit    @relation(fields: [siteVisitId], references: [id], onDelete: Cascade)
+  templateId    String?
+  template      ReportTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  generatedById String
+  generatedBy   User         @relation(fields: [generatedById], references: [id])
+  title         String
+  fileKey       String?
+  status        String       @default("GENERATING")
+  errorMessage  String?
+  createdAt     DateTime     @default(now())
+
+  @@index([projectId, createdAt])
+  @@index([siteVisitId])
+}
+
+model Activity {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project?     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  actorId        String
+  actor          User         @relation(fields: [actorId], references: [id])
+  kind           String
+  message        String
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([projectId, createdAt])
+}
