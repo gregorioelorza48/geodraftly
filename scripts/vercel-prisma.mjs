@@ -29,6 +29,7 @@ const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
 const databaseUrl = process.env.DATABASE_URL?.trim() ?? "";
 const onHosted = Boolean(
   process.env.VERCEL ||
+    process.env.RENDER ||
     process.env.RAILWAY_ENVIRONMENT ||
     process.env.RAILWAY_PROJECT_ID ||
     process.env.RAILWAY_SERVICE_ID,

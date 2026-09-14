@@ -67,23 +67,15 @@ Dashboard setup:
 3. Add products, an offering, and an entitlement (`pro` by default, or set `NEXT_PUBLIC_REVENUECAT_ENTITLEMENT`).
 4. Paste the Web Billing **public** API key into `NEXT_PUBLIC_REVENUECAT_API_KEY`. Sandbox keys start with `rcb_sb_`.
 
-## Deploy on Railway
+## Deploy on Render
 
-1. Push this repo to GitHub (including the current Prisma build script).
-2. At [railway.app](https://railway.app), sign in with GitHub → **New Project** → **Deploy from GitHub repo** → `geodraftly`.
-3. **Create** → **Database** → **PostgreSQL** in the same project.
-4. Open the **Geodraftly** service → **Variables**:
-   - `DATABASE_URL` = reference the Postgres variable `DATABASE_URL` (Variable Reference → Postgres)
-   - `SESSION_SECRET` = a long random string
-5. Open the service → **Settings** → **Networking** → **Generate domain**.
-6. Wait for the deploy to finish, then seed demo users once:
+1. Sign in at [render.com](https://render.com) with GitHub.
+2. **New** → **Blueprint** → pick the `geodraftly` repo (uses `render.yaml`). Apply. That creates the web app and a Postgres database and sets `DATABASE_URL` plus `SESSION_SECRET` for you.
+3. Wait until the service is **Live**. Open the `.onrender.com` URL.
+4. Sign in with `demo@geodraftly.app` / `demo1234`.
 
-```bash
-npx railway run npm run db:seed
-```
+Manual setup (no Blueprint): **New** → **Web Service** → `geodraftly`. Build `npm install && npm run build`, start `npm start`. Then **New** → **PostgreSQL**. On the web service **Environment**, add `DATABASE_URL` = the database **Internal Database URL**, and `SESSION_SECRET` = a long random string. Seed once from the web service **Shell**: `npm run db:seed`.
 
-Or in Railway: the web service → **Settings** → one-off command `npm run db:seed`.
-
-Sign in with `demo@geodraftly.app` / `demo1234`. Local `npm run dev` still uses SQLite.
+Local `npm run dev` still uses SQLite.
 
 Auth is email/password with org membership checks on every query. Swap the session layer for Clerk later if you want SSO and hosted org management — the `Organization` / `OrganizationMember` models already match that shape.
