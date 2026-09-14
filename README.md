@@ -52,13 +52,38 @@ Optional:
 
 - S3/R2 credentials for photo and report storage
 - `NEXT_PUBLIC_MAPBOX_TOKEN` for Mapbox light tiles
+- `NEXT_PUBLIC_REVENUECAT_API_KEY` for subscriptions (Web Billing public `rcb_` key)
 
-## Production notes
+## Billing (RevenueCat)
 
-1. Change the Prisma datasource `provider` to `postgresql`.
-2. Point `DATABASE_URL` at managed Postgres.
-3. Set a long random `SESSION_SECRET`.
-4. Put files on S3 or R2.
-5. Deploy the Next app to Vercel.
+Subscriptions are firm-scoped: the App User ID is `org_<organizationId>`, so everyone in the firm shares one plan. Open **Billing** in the sidebar (or Plans & billing on the workbench).
+
+Without a public key the app stays free to use and `/billing` shows setup steps. With a key, the page loads the current offering and checkout from [purchases-js](https://www.revenuecat.com/docs/web/web-billing/web-sdk).
+
+Dashboard setup:
+
+1. Create a project at [app.revenuecat.com](https://app.revenuecat.com).
+2. Connect Stripe (RevenueCat Billing) or Paddle, then create a Web Billing app.
+3. Add products, an offering, and an entitlement (`pro` by default, or set `NEXT_PUBLIC_REVENUECAT_ENTITLEMENT`).
+4. Paste the Web Billing **public** API key into `NEXT_PUBLIC_REVENUECAT_API_KEY`. Sandbox keys start with `rcb_sb_`.
+
+## Deploy on Railway
+
+1. Push this repo to GitHub (including the current Prisma build script).
+2. At [railway.app](https://railway.app), sign in with GitHub → **New Project** → **Deploy from GitHub repo** → `geodraftly`.
+3. **Create** → **Database** → **PostgreSQL** in the same project.
+4. Open the **Geodraftly** service → **Variables**:
+   - `DATABASE_URL` = reference the Postgres variable `DATABASE_URL` (Variable Reference → Postgres)
+   - `SESSION_SECRET` = a long random string
+5. Open the service → **Settings** → **Networking** → **Generate domain**.
+6. Wait for the deploy to finish, then seed demo users once:
+
+```bash
+npx railway run npm run db:seed
+```
+
+Or in Railway: the web service → **Settings** → one-off command `npm run db:seed`.
+
+Sign in with `demo@geodraftly.app` / `demo1234`. Local `npm run dev` still uses SQLite.
 
 Auth is email/password with org membership checks on every query. Swap the session layer for Clerk later if you want SSO and hosted org management — the `Organization` / `OrganizationMember` models already match that shape.

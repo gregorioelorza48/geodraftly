@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   ClipboardList,
+  CreditCard,
   FileText,
   FolderKanban,
   LayoutDashboard,
@@ -26,6 +27,7 @@ const STAFF_NAV = [
   { href: "/tasks", label: "Tasks", icon: ClipboardList },
   { href: "/reports", label: "Reports", icon: FileText },
   { href: "/team", label: "Team", icon: Users },
+  { href: "/billing", label: "Billing", icon: CreditCard },
   { href: "/settings", label: "Settings", icon: Settings },
 ];
 

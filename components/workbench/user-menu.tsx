@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown, FolderOpen, LogOut } from "lucide-react";
+import Link from "next/link";
+import { ChevronDown, CreditCard, FolderOpen, LogOut } from "lucide-react";
 import { useAuth } from "@/lib/auth-client/AuthContext";
 import { authService, type SavedProject } from "@/lib/auth-client/authService";
 import { useDesign } from "@/lib/design/store";
@@ -73,13 +74,21 @@ export function UserMenu() {
               ))
             )}
           </div>
+          <Link
+            href="/billing"
+            onClick={() => setOpen(false)}
+            className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800"
+          >
+            <CreditCard className="h-3.5 w-3.5" />
+            Plans & billing
+          </Link>
           <button
             type="button"
             onClick={() => {
               setOpen(false);
               void logout();
             }}
-            className="mt-1 flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800"
+            className="flex w-full items-center gap-2 rounded-lg px-2 py-2 text-xs font-semibold text-zinc-300 hover:bg-zinc-800"
           >
             <LogOut className="h-3.5 w-3.5" />
             Sign Out
