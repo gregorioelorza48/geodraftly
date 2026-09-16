@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import type { CustomerInfo, Offering, Package } from "@revenuecat/purchases-js";
 import { Badge, Button, Card } from "@/components/ui";
 import { firmAppUserId, hasRevenueCatKey, REVENUECAT_ENTITLEMENT, REVENUECAT_PUBLIC_KEY } from "@/lib/billing/config";
@@ -40,7 +40,6 @@ export function BillingPanel({
   userName,
   canManage,
 }: BillingPanelProps) {
-  const checkoutRef = useRef<HTMLDivElement>(null);
   const [status, setStatus] = useState<Status>(hasRevenueCatKey() ? "loading" : "idle");
   const [error, setError] = useState<string | null>(null);
   const [customerInfo, setCustomerInfo] = useState<CustomerInfo | null>(null);
@@ -106,7 +105,6 @@ export function BillingPanel({
       const result = await Purchases.getSharedInstance().purchase({
         rcPackage: pkg,
         customerEmail: userEmail,
-        htmlTarget: checkoutRef.current ?? undefined,
       });
       setCustomerInfo(result.customerInfo);
       setStatus("ready");
@@ -131,7 +129,6 @@ export function BillingPanel({
       const { Purchases, PurchasesError, ErrorCode } = await import("@revenuecat/purchases-js");
       const result = await Purchases.getSharedInstance().presentPaywall({
         offering,
-        htmlTarget: checkoutRef.current ?? undefined,
         customerEmail: userEmail,
       });
       setCustomerInfo(result.customerInfo);
@@ -288,11 +285,6 @@ export function BillingPanel({
           </p>
         </Card>
       ) : null}
-
-      <div
-        ref={checkoutRef}
-        className={status === "checkout" ? "min-h-[28rem] overflow-hidden rounded-2xl border border-line bg-white" : "hidden"}
-      />
     </div>
   );
 }
