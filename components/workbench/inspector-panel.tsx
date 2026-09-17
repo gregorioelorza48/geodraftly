@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { ChevronRight, ClipboardList, Save, Trash2, Undo2 } from "lucide-react";
 import { useSaveProject } from "@/components/workbench/use-save-project";
 import { formatAcres, formatArea, formatFeet, parkingSpecs } from "@/lib/design/metrics";
@@ -16,6 +16,32 @@ function Metric({ label, value, unit }: { label: string; value: string; unit?: s
         {unit ? <span className="ml-1 text-zinc-500">{unit}</span> : null}
       </p>
     </div>
+  );
+}
+
+function PunchListField({
+  punchList,
+  setPunchList,
+  rows,
+}: {
+  punchList: string;
+  setPunchList: (text: string) => void;
+  rows: number;
+}) {
+  return (
+    <>
+      <label className="sr-only" htmlFor="punch-list">
+        Punch list notes for the site observation report
+      </label>
+      <textarea
+        id="punch-list"
+        value={punchList}
+        onChange={(event) => setPunchList(event.target.value)}
+        placeholder="Items to include in the site observation report…"
+        rows={rows}
+        className="w-full resize-y bg-transparent text-sm leading-relaxed text-zinc-100 outline-none placeholder:text-zinc-600"
+      />
+    </>
   );
 }
 
@@ -43,10 +69,13 @@ export function InspectorPanel() {
   const selected = features.find((f) => f.id === selectedId);
   const lot = selected?.kind === "parking" ? parkingSpecs(selected.ring) : null;
   const { saveProject, status, message } = useSaveProject();
+  const lastParkingId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (lot) setInspectorOpen(true);
-  }, [lot, selectedId, setInspectorOpen]);
+    const parkingId = selected?.kind === "parking" ? selected.id : null;
+    if (parkingId && parkingId !== lastParkingId.current) setInspectorOpen(true);
+    lastParkingId.current = parkingId;
+  }, [selected, setInspectorOpen]);
 
   if (!inspectorOpen) {
     return (
@@ -64,17 +93,9 @@ export function InspectorPanel() {
             Inspector
           </button>
         </div>
-        <label className="sr-only" htmlFor="punch-list">
-          Punch list notes for the site observation report
-        </label>
-        <textarea
-          id="punch-list"
-          value={punchList}
-          onChange={(event) => setPunchList(event.target.value)}
-          placeholder="Items to include in the site observation report…"
-          rows={8}
-          className="min-h-[10rem] resize-y bg-transparent px-3 py-2.5 text-sm leading-relaxed text-zinc-100 outline-none placeholder:text-zinc-600"
-        />
+        <div className="min-h-[10rem] px-3 py-2.5">
+          <PunchListField punchList={punchList} setPunchList={setPunchList} rows={8} />
+        </div>
       </div>
     );
   }
@@ -108,6 +129,12 @@ export function InspectorPanel() {
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="rounded-xl border border-zinc-800 bg-zinc-950/50 px-3 py-2.5">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-zinc-500">Punch list</p>
+          <div className="mt-2 min-h-[7.5rem]">
+            <PunchListField punchList={punchList} setPunchList={setPunchList} rows={6} />
+          </div>
+        </div>
         {lot ? (
           <div className="rounded-xl border border-amber-400/40 bg-amber-400/10 px-3 py-3">
             <p className="text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-200">Selected parking lot</p>
