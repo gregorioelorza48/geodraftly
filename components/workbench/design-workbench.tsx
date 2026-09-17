@@ -35,7 +35,7 @@ function WorkbenchStage() {
                     ? "Click to place an amber parking lot — the map zooms in if you are looking at the whole city"
                     : tool === "pan"
                       ? "Hold the camera pad to tilt and rotate slowly · arrows also work"
-                      : "Select an object, then Delete to remove it · ⌘Z / Ctrl+Z to undo"}
+                      : "Drag a parcel, building, or parking lot to move it · Delete to remove"}
             </p>
           )}
           {importing ? (

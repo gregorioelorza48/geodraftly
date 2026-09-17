@@ -180,7 +180,7 @@ export function InspectorPanel() {
               Undo
             </button>
           </div>
-          <p className="mt-2 text-[11px] text-zinc-500">Delete / Backspace removes the selection. ⌘Z or Ctrl+Z undoes.</p>
+          <p className="mt-2 text-[11px] text-zinc-500">Drag on the map to move the selection. Delete / Backspace removes it.</p>
         </div>
         {overlays.length ? (
           <div className="rounded-xl border border-zinc-800 px-3 py-2.5">

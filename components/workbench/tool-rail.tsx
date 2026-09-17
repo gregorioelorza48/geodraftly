@@ -6,7 +6,7 @@ import type { DesignTool } from "@/lib/design/types";
 import { cn } from "@/lib/utils";
 
 const TOOLS: { id: DesignTool; label: string; hint: string; icon: typeof Hand }[] = [
-  { id: "select", label: "Select", hint: "Select a spatial object", icon: MousePointer2 },
+  { id: "select", label: "Select", hint: "Drag to move a parcel, building, or parking lot", icon: MousePointer2 },
   { id: "pan", label: "Pan", hint: "Orbit, pan, and zoom the site", icon: Hand },
   { id: "polygon", label: "Site boundary", hint: "Draw a parcel polygon", icon: Pentagon },
   { id: "pad", label: "Building pad", hint: "Place a 3D pad inside the setback", icon: Box },

@@ -6,7 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { booleanPointInPolygon, point } from "@turf/turf";
-import { featureBounds, ringToPolygon } from "@/lib/design/geo";
+import { featureBounds, ringToPolygon, translateRing } from "@/lib/design/geo";
 import { DEMO_SITE_CENTER } from "@/lib/design/demo-site";
 import { CameraControls } from "@/components/workbench/camera-controls";
 import { syncDesignObjects, syncImportOverlays } from "@/lib/design/map-overlays";
@@ -14,7 +14,7 @@ import { workbenchStyle } from "@/lib/design/map-style";
 import { formatArea, parkingSpecs } from "@/lib/design/metrics";
 import { useDesign } from "@/lib/design/store";
 import { DesignThreeLayer } from "@/lib/design/three-layer";
-import type { LngLat } from "@/lib/design/types";
+import type { LngLat, Ring } from "@/lib/design/types";
 
 function parkingCallout(feature: { name: string; ring: LngLat[] }) {
   const specs = parkingSpecs(feature.ring);
@@ -37,12 +37,21 @@ function hitTest(lngLat: LngLat, features: ReturnType<typeof useDesign>["feature
   return null;
 }
 
+type DragSession = {
+  id: string;
+  start: LngLat;
+  original: Ring;
+  moved: boolean;
+};
+
 export function DesignCanvas() {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
   const layerRef = useRef<DesignThreeLayer | null>(null);
   const orbitRef = useRef<OrbitControls | null>(null);
   const calloutRef = useRef<maplibregl.Marker | null>(null);
+  const dragRef = useRef<DragSession | null>(null);
+  const skipClickRef = useRef(false);
   const fittedRef = useRef(false);
   const {
     project,
@@ -56,6 +65,8 @@ export function DesignCanvas() {
     cancelDraft,
     placePad,
     placeParking,
+    setFeatureRing,
+    pushHistory,
     select,
     setCursor,
     applySetbackTool,
@@ -66,8 +77,32 @@ export function DesignCanvas() {
     undo,
   } = useDesign();
 
-  const latest = useRef({ tool, features, draftRing, addDraftVertex, closeDraft, placePad, placeParking, select, applySetbackTool });
-  latest.current = { tool, features, draftRing, addDraftVertex, closeDraft, placePad, placeParking, select, applySetbackTool };
+  const latest = useRef({
+    tool,
+    features,
+    draftRing,
+    addDraftVertex,
+    closeDraft,
+    placePad,
+    placeParking,
+    setFeatureRing,
+    pushHistory,
+    select,
+    applySetbackTool,
+  });
+  latest.current = {
+    tool,
+    features,
+    draftRing,
+    addDraftVertex,
+    closeDraft,
+    placePad,
+    placeParking,
+    setFeatureRing,
+    pushHistory,
+    select,
+    applySetbackTool,
+  };
   const getMap = useCallback(() => mapRef.current, []);
 
   useEffect(() => {
@@ -132,11 +167,81 @@ export function DesignCanvas() {
       });
     });
 
+    function dragTo(lngLat: LngLat) {
+      const drag = dragRef.current;
+      const current = latest.current;
+      if (!drag) {
+        if (current.tool === "select") {
+          map.getCanvas().style.cursor = hitTest(lngLat, current.features) ? "grab" : "default";
+        }
+        return;
+      }
+      const dLng = lngLat[0] - drag.start[0];
+      const dLat = lngLat[1] - drag.start[1];
+      if (!drag.moved && Math.hypot(dLng, dLat) < 1.5e-7) return;
+      if (!drag.moved) {
+        current.pushHistory();
+        drag.moved = true;
+        skipClickRef.current = true;
+      }
+      current.setFeatureRing(drag.id, translateRing(drag.original, dLng, dLat));
+      map.getCanvas().style.cursor = "grabbing";
+    }
+
     map.on("mousemove", (event) => {
-      setCursor([event.lngLat.lng, event.lngLat.lat]);
+      const lngLat: LngLat = [event.lngLat.lng, event.lngLat.lat];
+      setCursor(lngLat);
+      dragTo(lngLat);
+    });
+    map.on("touchmove", (event) => {
+      const lngLat: LngLat = [event.lngLat.lng, event.lngLat.lat];
+      setCursor(lngLat);
+      dragTo(lngLat);
     });
 
+    function beginDrag(lngLat: LngLat) {
+      const current = latest.current;
+      if (current.tool !== "select") return false;
+      const id = hitTest(lngLat, current.features);
+      if (!id) return false;
+      const feature = current.features.find((item) => item.id === id);
+      if (!feature) return false;
+      map.dragPan.disable();
+      current.select(id);
+      dragRef.current = {
+        id,
+        start: lngLat,
+        original: feature.ring.map((point) => [point[0], point[1]] as LngLat),
+        moved: false,
+      };
+      map.getCanvas().style.cursor = "grabbing";
+      return true;
+    }
+
+    function endDrag() {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      if (latest.current.tool === "select") map.dragPan.enable();
+      map.getCanvas().style.cursor = "default";
+    }
+
+    map.on("mousedown", (event) => {
+      const button = "button" in event.originalEvent ? event.originalEvent.button : 0;
+      if (button !== 0) return;
+      if (beginDrag([event.lngLat.lng, event.lngLat.lat])) event.preventDefault();
+    });
+    map.on("mouseup", endDrag);
+    map.on("touchstart", (event) => {
+      if (beginDrag([event.lngLat.lng, event.lngLat.lat])) event.preventDefault();
+    });
+    map.on("touchend", endDrag);
+    window.addEventListener("mouseup", endDrag);
+
     map.on("click", (event) => {
+      if (skipClickRef.current) {
+        skipClickRef.current = false;
+        return;
+      }
       const lngLat: LngLat = [event.lngLat.lng, event.lngLat.lat];
       const current = latest.current;
       if (current.tool === "polygon") {
@@ -167,6 +272,7 @@ export function DesignCanvas() {
 
     mapRef.current = map;
     return () => {
+      window.removeEventListener("mouseup", endDrag);
       orbit.dispose();
       map.remove();
       mapRef.current = null;
@@ -265,7 +371,7 @@ export function DesignCanvas() {
       ],
       { padding: 160, maxZoom: 18, duration: 700, pitch: Math.max(map.getPitch(), 58), bearing: map.getBearing() },
     );
-  }, [selectedId, features]);
+  }, [selectedId]);
 
   useEffect(() => {
     const map = mapRef.current;

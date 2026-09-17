@@ -54,6 +54,8 @@ type DesignContextValue = {
   cancelDraft: () => void;
   placePad: (center: LngLat) => void;
   placeParking: (center: LngLat) => void;
+  setFeatureRing: (id: string, ring: Ring) => void;
+  pushHistory: () => void;
   deleteSelected: () => void;
   undo: () => void;
   canUndo: boolean;
@@ -267,6 +269,15 @@ export function DesignProvider({
       });
       select(lot.id);
       setTool("select");
+    },
+    setFeatureRing(id, ring) {
+      setFeatures((existing) => existing.map((feature) => (feature.id === id ? { ...feature, ring } : feature)));
+    },
+    pushHistory() {
+      setFeatures((existing) => {
+        remember(existing);
+        return existing;
+      });
     },
     deleteSelected() {
       if (!selectedId) {

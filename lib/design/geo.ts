@@ -86,6 +86,10 @@ export function lngLatToLocalMeters(lng: number, lat: number, origin: LngLat): [
   return [(lng - origin[0]) * metersPerDegLng, (lat - origin[1]) * metersPerDegLat];
 }
 
+export function translateRing(ring: Ring, dLng: number, dLat: number): Ring {
+  return ring.map(([lng, lat]) => [lng + dLng, lat + dLat] as LngLat);
+}
+
 export function draftLine(points: LngLat[]) {
   if (points.length < 2) return null;
   return lineString(points as Position[]);
