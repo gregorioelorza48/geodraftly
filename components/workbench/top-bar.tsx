@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { Download, Save, Upload } from "lucide-react";
+import { SearchPill } from "@/components/workbench/search-pill";
 import { UserMenu } from "@/components/workbench/user-menu";
 import { useSaveProject } from "@/components/workbench/use-save-project";
 import { serializeDxf } from "@/lib/design/dxf";
@@ -59,8 +60,8 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
   }
 
   return (
-    <header className="relative z-30 flex h-12 items-center gap-3 border-b border-zinc-800 bg-zinc-950/85 px-3 backdrop-blur-md">
-      <div className="min-w-0">
+    <header className="relative z-30 flex h-12 min-w-0 items-center gap-2 border-b border-zinc-800 bg-zinc-950/85 px-3 backdrop-blur-md">
+      <div className="min-w-0 shrink-0">
         <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/80">Geodraftly</p>
         <select
           value={project?.id ?? ""}
@@ -76,7 +77,9 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
         </select>
       </div>
 
-      <div className="hidden items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/70 px-2.5 py-1 font-mono text-[11px] text-zinc-400 md:flex">
+      <SearchPill />
+
+      <div className="hidden items-center gap-2 rounded-lg border border-zinc-800 bg-zinc-900/70 px-2.5 py-1 font-mono text-[11px] text-zinc-400 2xl:flex">
         <span className="text-zinc-600">CRS</span>
         <span className="text-zinc-200">WGS84 · EPSG:4326</span>
         <span className="text-zinc-600">·</span>
@@ -96,7 +99,7 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
           if (file) void importZip(file);
         }}
         className={cn(
-          "ml-auto flex h-8 cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 text-xs font-semibold transition",
+          "flex h-8 shrink-0 cursor-pointer items-center gap-2 rounded-lg border border-dashed px-3 text-xs font-semibold transition",
           importing && "pointer-events-none opacity-70",
           dragOver ? "border-cyan-400 bg-cyan-400/10 text-cyan-200" : "border-zinc-700 bg-zinc-900/60 text-zinc-300 hover:border-zinc-500",
         )}
@@ -137,7 +140,7 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
       <button
         type="button"
         onClick={exportGeoJson}
-        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-xs font-semibold text-zinc-200 hover:border-zinc-600"
+        className="hidden h-8 items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-xs font-semibold text-zinc-200 hover:border-zinc-600 2xl:inline-flex"
       >
         <Download className="h-3.5 w-3.5" />
         Export GeoJSON

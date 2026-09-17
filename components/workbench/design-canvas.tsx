@@ -75,6 +75,7 @@ export function DesignCanvas() {
     selectedId,
     deleteSelected,
     undo,
+    viewTarget,
   } = useDesign();
 
   const latest = useRef({
@@ -298,6 +299,21 @@ export function DesignCanvas() {
 
   useEffect(() => {
     const map = mapRef.current;
+    if (!map || !viewTarget) return;
+    fittedRef.current = true;
+    layerRef.current?.setOrigin(viewTarget.center);
+    map.easeTo({
+      center: viewTarget.center,
+      zoom: 18,
+      pitch: 52,
+      bearing: -24,
+      duration: 1100,
+    });
+    map.triggerRepaint();
+  }, [viewTarget]);
+
+  useEffect(() => {
+    const map = mapRef.current;
     const orbit = orbitRef.current;
     if (!map || !orbit) return;
     const drawing = tool === "polygon" || tool === "pad" || tool === "parking";
@@ -407,9 +423,9 @@ export function DesignCanvas() {
           target.tagName === "TEXTAREA" ||
           target.tagName === "SELECT" ||
           target.isContentEditable);
+      if (typing) return;
       if (event.key === "Enter") closeDraft();
       if (event.key === "Escape") cancelDraft();
-      if (typing) return;
       if ((event.key === "Delete" || event.key === "Backspace") && !event.metaKey && !event.ctrlKey) {
         event.preventDefault();
         deleteSelected();

@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { loadDraft, writeDraft, type DesignSnapshot } from "./persist";
-import { areaSqFt, insetRing, rectangleAround } from "./geo";
+import { areaSqFt, featureCenter, insetRing, rectangleAround, translateRing } from "./geo";
 import { computeMetrics } from "./metrics";
 import type { ShapefileImport } from "./shapefile";
 import {
@@ -62,6 +62,8 @@ type DesignContextValue = {
   importSite: (parsed: ShapefileImport) => void;
   applySetbackTool: () => void;
   seedDefaultSite: (center: LngLat) => void;
+  goToLocation: (center: LngLat) => void;
+  viewTarget: { center: LngLat; nonce: number } | null;
   captureSnapshot: () => DesignSnapshot;
   applySnapshot: (snapshot: DesignSnapshot) => void;
 };
@@ -91,6 +93,7 @@ export function DesignProvider({
   const [error, setError] = useState<string | null>(null);
   const [ready, setReady] = useState(false);
   const [past, setPast] = useState<SiteFeature[][]>([]);
+  const [viewTarget, setViewTarget] = useState<{ center: LngLat; nonce: number } | null>(null);
 
   const project = projects.find((p) => p.id === projectId) ?? projects[0] ?? null;
 
@@ -195,12 +198,14 @@ export function DesignProvider({
     error,
     setError,
     metrics,
+    viewTarget,
     canUndo: past.length > 0,
     addDraftVertex(lngLat) {
       setDraftRing((current) => [...current, lngLat]);
     },
     closeDraft() {
       setDraftRing((current) => {
+        if (current.length === 0) return current;
         if (current.length < 3) {
           setError("Need at least three vertices to close a site boundary.");
           return current;
@@ -341,6 +346,21 @@ export function DesignProvider({
       setFeatures([nextParcel, pad, lot]);
       setOverlays([]);
       select(nextParcel.id);
+    },
+    goToLocation(center) {
+      setError(null);
+      if (!sourceName) {
+        setFeatures((existing) => {
+          const from = featureCenter(existing);
+          if (!from || existing.length === 0) return existing;
+          const dLng = center[0] - from[0];
+          const dLat = center[1] - from[1];
+          if (Math.hypot(dLng, dLat) < 1e-9) return existing;
+          remember(existing);
+          return existing.map((feature) => ({ ...feature, ring: translateRing(feature.ring, dLng, dLat) }));
+        });
+      }
+      setViewTarget({ center, nonce: Date.now() });
     },
     captureSnapshot,
     applySnapshot,

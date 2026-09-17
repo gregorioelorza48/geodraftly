@@ -28,7 +28,7 @@ export async function middleware(request: NextRequest) {
     }
   }
 
-  if (PUBLIC.has(pathname) || pathname.startsWith("/api/auth")) {
+  if (PUBLIC.has(pathname) || pathname.startsWith("/api/auth") || pathname.startsWith("/api/geocode")) {
     if (signedIn && (pathname === "/login" || pathname === "/signup")) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
