@@ -1,9 +1,9 @@
-export type DesignTool = "select" | "pan" | "polygon" | "pad" | "parking" | "setback";
+export type DesignTool = "select" | "pencil" | "pan" | "polygon" | "pad" | "parking" | "setback";
 
 export type LngLat = [number, number];
 export type Ring = LngLat[];
 
-export type SiteKind = "parcel" | "pad" | "parking";
+export type SiteKind = "parcel" | "pad" | "parking" | "mark";
 
 export type OverlayKind = "building" | "road" | "water" | "landuse" | "rail" | "other";
 

@@ -6,7 +6,7 @@ import "maplibre-gl/dist/maplibre-gl.css";
 import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { booleanPointInPolygon, point } from "@turf/turf";
-import { featureBounds, ringToPolygon, translateRing } from "@/lib/design/geo";
+import { distanceToStroke, featureBounds, ringToPolygon, translateRing } from "@/lib/design/geo";
 import { DEMO_SITE_CENTER } from "@/lib/design/demo-site";
 import { CameraControls } from "@/components/workbench/camera-controls";
 import { syncDesignObjects, syncImportOverlays } from "@/lib/design/map-overlays";
@@ -31,6 +31,10 @@ function parkingCallout(feature: { name: string; ring: LngLat[] }) {
 
 function hitTest(lngLat: LngLat, features: ReturnType<typeof useDesign>["features"]) {
   for (const feature of [...features].reverse()) {
+    if (feature.kind === "mark") {
+      if (distanceToStroke(lngLat, feature.ring) < 6e-5) return feature.id;
+      continue;
+    }
     const poly = ringToPolygon(feature.ring);
     if (poly && booleanPointInPolygon(point(lngLat), poly)) return feature.id;
   }
@@ -51,6 +55,7 @@ export function DesignCanvas() {
   const orbitRef = useRef<OrbitControls | null>(null);
   const calloutRef = useRef<maplibregl.Marker | null>(null);
   const dragRef = useRef<DragSession | null>(null);
+  const strokeRef = useRef<LngLat[] | null>(null);
   const skipClickRef = useRef(false);
   const fittedRef = useRef(false);
   const {
@@ -63,9 +68,11 @@ export function DesignCanvas() {
     addDraftVertex,
     closeDraft,
     cancelDraft,
+    setDraftRing,
     placePad,
     placeParking,
     setFeatureRing,
+    addMark,
     pushHistory,
     select,
     setCursor,
@@ -84,9 +91,12 @@ export function DesignCanvas() {
     draftRing,
     addDraftVertex,
     closeDraft,
+    cancelDraft,
+    setDraftRing,
     placePad,
     placeParking,
     setFeatureRing,
+    addMark,
     pushHistory,
     select,
     applySetbackTool,
@@ -97,9 +107,12 @@ export function DesignCanvas() {
     draftRing,
     addDraftVertex,
     closeDraft,
+    cancelDraft,
+    setDraftRing,
     placePad,
     placeParking,
     setFeatureRing,
+    addMark,
     pushHistory,
     select,
     applySetbackTool,
@@ -170,7 +183,17 @@ export function DesignCanvas() {
 
     function dragTo(lngLat: LngLat) {
       const drag = dragRef.current;
+      const stroke = strokeRef.current;
       const current = latest.current;
+      if (stroke) {
+        const last = stroke[stroke.length - 1];
+        if (Math.hypot(lngLat[0] - last[0], lngLat[1] - last[1]) >= 8e-7) {
+          stroke.push(lngLat);
+          current.addDraftVertex(lngLat);
+        }
+        map.getCanvas().style.cursor = "crosshair";
+        return;
+      }
       if (!drag) {
         if (current.tool === "select") {
           map.getCanvas().style.cursor = hitTest(lngLat, current.features) ? "grab" : "default";
@@ -200,6 +223,33 @@ export function DesignCanvas() {
       dragTo(lngLat);
     });
 
+    function beginStroke(lngLat: LngLat) {
+      const current = latest.current;
+      if (current.tool !== "pencil") return false;
+      map.dragPan.disable();
+      current.setDraftRing([lngLat]);
+      strokeRef.current = [lngLat];
+      map.getCanvas().style.cursor = "crosshair";
+      return true;
+    }
+
+    function endStroke() {
+      const stroke = strokeRef.current;
+      if (!stroke) return;
+      strokeRef.current = null;
+      skipClickRef.current = true;
+      currentCancelDraftAndCommit(stroke);
+    }
+
+    function currentCancelDraftAndCommit(stroke: LngLat[]) {
+      latest.current.setDraftRing([]);
+      latest.current.addMark(stroke);
+      if (latest.current.tool === "pencil") {
+        map.dragPan.disable();
+        map.getCanvas().style.cursor = "crosshair";
+      }
+    }
+
     function beginDrag(lngLat: LngLat) {
       const current = latest.current;
       if (current.tool !== "select") return false;
@@ -226,17 +276,24 @@ export function DesignCanvas() {
       map.getCanvas().style.cursor = "default";
     }
 
+    function onPointerUp() {
+      endStroke();
+      endDrag();
+    }
+
     map.on("mousedown", (event) => {
       const button = "button" in event.originalEvent ? event.originalEvent.button : 0;
       if (button !== 0) return;
-      if (beginDrag([event.lngLat.lng, event.lngLat.lat])) event.preventDefault();
+      const lngLat: LngLat = [event.lngLat.lng, event.lngLat.lat];
+      if (beginStroke(lngLat) || beginDrag(lngLat)) event.preventDefault();
     });
-    map.on("mouseup", endDrag);
+    map.on("mouseup", onPointerUp);
     map.on("touchstart", (event) => {
-      if (beginDrag([event.lngLat.lng, event.lngLat.lat])) event.preventDefault();
+      const lngLat: LngLat = [event.lngLat.lng, event.lngLat.lat];
+      if (beginStroke(lngLat) || beginDrag(lngLat)) event.preventDefault();
     });
-    map.on("touchend", endDrag);
-    window.addEventListener("mouseup", endDrag);
+    map.on("touchend", onPointerUp);
+    window.addEventListener("mouseup", onPointerUp);
 
     map.on("click", (event) => {
       if (skipClickRef.current) {
@@ -273,7 +330,7 @@ export function DesignCanvas() {
 
     mapRef.current = map;
     return () => {
-      window.removeEventListener("mouseup", endDrag);
+      window.removeEventListener("mouseup", onPointerUp);
       orbit.dispose();
       map.remove();
       mapRef.current = null;
@@ -316,7 +373,7 @@ export function DesignCanvas() {
     const map = mapRef.current;
     const orbit = orbitRef.current;
     if (!map || !orbit) return;
-    const drawing = tool === "polygon" || tool === "pad" || tool === "parking";
+    const drawing = tool === "polygon" || tool === "pad" || tool === "parking" || tool === "pencil";
     orbit.enabled = tool === "pan";
     map.dragPan.enable();
     map.scrollZoom.enable();
@@ -345,7 +402,7 @@ export function DesignCanvas() {
         : null);
     if (origin) layerRef.current?.setOrigin(origin);
     layerRef.current?.update(features, setback, padHeightFt, draftRing);
-    if (mapRef.current?.loaded()) syncDesignObjects(mapRef.current, features, selectedId, padHeightFt);
+    if (mapRef.current?.loaded()) syncDesignObjects(mapRef.current, features, selectedId, padHeightFt, draftRing);
 
     const bounds = featureBounds(features);
     if (bounds && !fittedRef.current && mapRef.current) {
@@ -365,11 +422,11 @@ export function DesignCanvas() {
     if (!map) return;
     const apply = () => {
       syncImportOverlays(map, overlays);
-      syncDesignObjects(map, features, selectedId, padHeightFt);
+      syncDesignObjects(map, features, selectedId, padHeightFt, draftRing);
     };
     if (map.loaded()) apply();
     else map.once("load", apply);
-  }, [overlays, features, selectedId, padHeightFt]);
+  }, [overlays, features, selectedId, padHeightFt, draftRing]);
 
   useEffect(() => {
     const map = mapRef.current;
@@ -424,8 +481,11 @@ export function DesignCanvas() {
           target.tagName === "SELECT" ||
           target.isContentEditable);
       if (typing) return;
-      if (event.key === "Enter") closeDraft();
-      if (event.key === "Escape") cancelDraft();
+      if (event.key === "Enter" && tool === "polygon") closeDraft();
+      if (event.key === "Escape") {
+        strokeRef.current = null;
+        cancelDraft();
+      }
       if ((event.key === "Delete" || event.key === "Backspace") && !event.metaKey && !event.ctrlKey) {
         event.preventDefault();
         deleteSelected();
@@ -456,7 +516,7 @@ export function DesignCanvas() {
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [closeDraft, cancelDraft, deleteSelected, undo]);
+  }, [tool, closeDraft, cancelDraft, deleteSelected, undo]);
 
   return (
     <>

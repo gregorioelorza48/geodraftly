@@ -35,7 +35,8 @@ export function layoutPolylines(features: SiteFeature[], setback: Ring | null): 
   const polylines: CadPolyline[] = [];
 
   for (const feature of features) {
-    const layer = CAD_LAYERS[feature.kind] ?? CAD_LAYERS.parcel;
+    if (feature.kind === "mark") continue;
+    const layer = CAD_LAYERS[feature.kind];
     const vertices = ringToLocalVertices(feature.ring, origin);
     if (vertices.length < 3) continue;
     polylines.push({ layer: layer.name, color: layer.color, vertices });

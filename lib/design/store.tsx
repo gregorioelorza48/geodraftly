@@ -38,6 +38,7 @@ type DesignContextValue = {
   parkingRatio: number;
   setParkingRatio: (n: number) => void;
   draftRing: LngLat[];
+  setDraftRing: (ring: LngLat[]) => void;
   cursor: LngLat | null;
   setCursor: (lngLat: LngLat | null) => void;
   inspectorOpen: boolean;
@@ -55,6 +56,7 @@ type DesignContextValue = {
   placePad: (center: LngLat) => void;
   placeParking: (center: LngLat) => void;
   setFeatureRing: (id: string, ring: Ring) => void;
+  addMark: (path: LngLat[]) => void;
   pushHistory: () => void;
   deleteSelected: () => void;
   undo: () => void;
@@ -187,6 +189,7 @@ export function DesignProvider({
     parkingRatio,
     setParkingRatio,
     draftRing,
+    setDraftRing,
     cursor,
     setCursor,
     inspectorOpen,
@@ -204,6 +207,10 @@ export function DesignProvider({
       setDraftRing((current) => [...current, lngLat]);
     },
     closeDraft() {
+      if (tool !== "polygon") {
+        setDraftRing([]);
+        return;
+      }
       setDraftRing((current) => {
         if (current.length === 0) return current;
         if (current.length < 3) {
@@ -213,8 +220,8 @@ export function DesignProvider({
         const ring = [...current, current[0]] as Ring;
         const next: SiteFeature = {
           id: uid(),
-          kind: tool === "parking" ? "parking" : tool === "pad" ? "pad" : "parcel",
-          name: tool === "parking" ? "Parking lot" : tool === "pad" ? "Building pad" : "Site boundary",
+          kind: "parcel",
+          name: "Site boundary",
           ring,
         };
         setFeatures((existing) => {
@@ -278,6 +285,22 @@ export function DesignProvider({
     setFeatureRing(id, ring) {
       setFeatures((existing) => existing.map((feature) => (feature.id === id ? { ...feature, ring } : feature)));
     },
+    addMark(path) {
+      if (!path.length) return;
+      const ring = path.length === 1 ? [path[0], path[0]] : path;
+      const mark: SiteFeature = {
+        id: uid(),
+        kind: "mark",
+        name: path.length <= 2 ? "Mark" : "Sketch",
+        ring,
+      };
+      setFeatures((existing) => {
+        remember(existing);
+        return [...existing, mark];
+      });
+      select(mark.id);
+      setError(null);
+    },
     pushHistory() {
       setFeatures((existing) => {
         remember(existing);
@@ -286,7 +309,7 @@ export function DesignProvider({
     },
     deleteSelected() {
       if (!selectedId) {
-        setError("Select a parking lot, building pad, or parcel first.");
+        setError("Select a parking lot, building pad, parcel, or sketch first.");
         return;
       }
       setFeatures((existing) => {

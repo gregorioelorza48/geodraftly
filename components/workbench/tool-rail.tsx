@@ -1,12 +1,13 @@
 "use client";
 
-import { Box, Car, Hand, MousePointer2, Pentagon, Spline } from "lucide-react";
+import { Box, Car, Hand, MousePointer2, Pencil, Pentagon, Spline } from "lucide-react";
 import { useDesign } from "@/lib/design/store";
 import type { DesignTool } from "@/lib/design/types";
 import { cn } from "@/lib/utils";
 
 const TOOLS: { id: DesignTool; label: string; hint: string; icon: typeof Hand }[] = [
   { id: "select", label: "Select", hint: "Drag to move a parcel, building, or parking lot", icon: MousePointer2 },
+  { id: "pencil", label: "Pencil", hint: "Draw sketches and drop marks on the site", icon: Pencil },
   { id: "pan", label: "Pan", hint: "Orbit, pan, and zoom the site", icon: Hand },
   { id: "polygon", label: "Site boundary", hint: "Draw a parcel polygon", icon: Pentagon },
   { id: "pad", label: "Building pad", hint: "Place a 3D pad inside the setback", icon: Box },

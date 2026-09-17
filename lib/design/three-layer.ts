@@ -78,7 +78,10 @@ export class DesignThreeLayer implements maplibregl.CustomLayerInterface {
     const parcel = features.find((f) => f.kind === "parcel");
     if (parcel && parcel.ring.length < 240) this.addOutline(parcel.ring, origin, CYAN, false, 1.2);
     if (setback) this.addOutline(setback, origin, YELLOW, true, 1);
-    if (draft.length) this.addOutline(draft, origin, 0xe2e8f0, false, 1);
+    if (draft.length) this.addOutline(draft, origin, 0xf472b6, false, 1.4);
+    for (const feature of features) {
+      if (feature.kind === "mark" && feature.ring.length) this.addOutline(feature.ring, origin, 0xf472b6, false, 1.4);
+    }
     this.map?.triggerRepaint();
   }
 

@@ -180,7 +180,11 @@ export function InspectorPanel() {
               Undo
             </button>
           </div>
-          <p className="mt-2 text-[11px] text-zinc-500">Drag on the map to move the selection. Delete / Backspace removes it.</p>
+          <p className="mt-2 text-[11px] text-zinc-500">
+            {selected?.kind === "mark"
+              ? "Delete / Backspace removes this sketch."
+              : "Drag on the map to move the selection. Delete / Backspace removes it."}
+          </p>
         </div>
         {overlays.length ? (
           <div className="rounded-xl border border-zinc-800 px-3 py-2.5">

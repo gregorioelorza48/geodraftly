@@ -30,13 +30,19 @@ export function polygonOuterRing(geometry: Polygon | MultiPolygon): Ring | null 
 }
 
 export function featureBounds(features: SiteFeature[]) {
-  const polys = features.map((f) => ringToPolygon(f.ring)).filter(Boolean);
+  const polys = features
+    .filter((f) => f.kind !== "mark")
+    .map((f) => ringToPolygon(f.ring))
+    .filter(Boolean);
   if (!polys.length) return null;
   return bbox(featureCollection(polys as Feature<Polygon>[]));
 }
 
 export function featureCenter(features: SiteFeature[]): LngLat | null {
-  const polys = features.map((f) => ringToPolygon(f.ring)).filter(Boolean);
+  const polys = features
+    .filter((f) => f.kind !== "mark")
+    .map((f) => ringToPolygon(f.ring))
+    .filter(Boolean);
   if (!polys.length) return null;
   const c = centroid(featureCollection(polys as Feature<Polygon>[]));
   return c.geometry.coordinates as LngLat;
@@ -90,18 +96,62 @@ export function translateRing(ring: Ring, dLng: number, dLat: number): Ring {
   return ring.map(([lng, lat]) => [lng + dLng, lat + dLat] as LngLat);
 }
 
+function hypotDeg(a: LngLat, b: LngLat) {
+  const dLng = (a[0] - b[0]) * Math.cos(((a[1] + b[1]) * 0.5 * Math.PI) / 180);
+  const dLat = a[1] - b[1];
+  return Math.hypot(dLng, dLat);
+}
+
+function distToSegment(point: LngLat, a: LngLat, b: LngLat) {
+  const dx = (b[0] - a[0]) * Math.cos(((a[1] + b[1]) * 0.5 * Math.PI) / 180);
+  const dy = b[1] - a[1];
+  const len2 = dx * dx + dy * dy;
+  if (len2 < 1e-24) return hypotDeg(point, a);
+  const px = (point[0] - a[0]) * Math.cos(((a[1] + b[1]) * 0.5 * Math.PI) / 180);
+  const py = point[1] - a[1];
+  const t = Math.max(0, Math.min(1, (px * dx + py * dy) / len2));
+  return Math.hypot(px - dx * t, py - dy * t);
+}
+
+/** Approximate degree distance from a point to a markup stroke. */
+export function distanceToStroke(lngLat: LngLat, stroke: Ring) {
+  if (stroke.length === 0) return Number.POSITIVE_INFINITY;
+  if (stroke.length === 1) return hypotDeg(lngLat, stroke[0]);
+  let min = Number.POSITIVE_INFINITY;
+  for (let i = 0; i < stroke.length - 1; i++) {
+    min = Math.min(min, distToSegment(lngLat, stroke[i], stroke[i + 1]));
+  }
+  return min;
+}
+
 export function draftLine(points: LngLat[]) {
   if (points.length < 2) return null;
   return lineString(points as Position[]);
 }
 
 export function toFeatureCollection(features: SiteFeature[], setback: Ring | null): FeatureCollection {
-  const out: Feature[] = features.map((feature) => ({
-    type: "Feature",
-    id: feature.id,
-    properties: { name: feature.name, kind: feature.kind },
-    geometry: { type: "Polygon", coordinates: [closeRing(feature.ring)] },
-  }));
+  const out: Feature[] = [];
+  for (const feature of features) {
+    if (!feature.ring.length) continue;
+    if (feature.kind === "mark") {
+      out.push({
+        type: "Feature",
+        id: feature.id,
+        properties: { name: feature.name, kind: feature.kind },
+        geometry:
+          feature.ring.length < 2
+            ? { type: "Point", coordinates: feature.ring[0] }
+            : { type: "LineString", coordinates: feature.ring },
+      });
+      continue;
+    }
+    out.push({
+      type: "Feature",
+      id: feature.id,
+      properties: { name: feature.name, kind: feature.kind },
+      geometry: { type: "Polygon", coordinates: [closeRing(feature.ring)] },
+    });
+  }
   if (setback && setback.length >= 4) {
     out.push({
       type: "Feature",

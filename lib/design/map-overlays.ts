@@ -1,7 +1,7 @@
 import type { Feature, FeatureCollection } from "geojson";
 import type maplibregl from "maplibre-gl";
 import { closeRing } from "./geo";
-import type { OverlayKind, OverlayLayer, SiteFeature } from "./types";
+import type { LngLat, OverlayKind, OverlayLayer, SiteFeature } from "./types";
 
 const PREFIX = "geodraftly-import-";
 const OBJECT_SRC = "geodraftly-object-src";
@@ -9,6 +9,10 @@ const OBJECT_FILL = "geodraftly-object-fill";
 const OBJECT_EXTRUDE = "geodraftly-object-extrude";
 const OBJECT_GLOW = "geodraftly-object-glow";
 const OBJECT_LINE = "geodraftly-object-line";
+const MARK_SRC = "geodraftly-mark-src";
+const MARK_GLOW = "geodraftly-mark-glow";
+const MARK_LINE = "geodraftly-mark-line";
+const MARK_POINT = "geodraftly-mark-point";
 const THREE_LAYER = "geodraftly-3d";
 
 const FILL: Record<OverlayKind, { color: string; opacity: number; line: string }> = {
@@ -105,78 +109,144 @@ export function syncDesignObjects(
   features: SiteFeature[],
   selectedId: string | null,
   padHeightFt = 28,
+  draftRing: LngLat[] = [],
 ) {
   if (map.getLayer(OBJECT_LINE)) map.removeLayer(OBJECT_LINE);
   if (map.getLayer(OBJECT_GLOW)) map.removeLayer(OBJECT_GLOW);
   if (map.getLayer(OBJECT_EXTRUDE)) map.removeLayer(OBJECT_EXTRUDE);
   if (map.getLayer(OBJECT_FILL)) map.removeLayer(OBJECT_FILL);
   if (map.getSource(OBJECT_SRC)) map.removeSource(OBJECT_SRC);
+  if (map.getLayer(MARK_POINT)) map.removeLayer(MARK_POINT);
+  if (map.getLayer(MARK_LINE)) map.removeLayer(MARK_LINE);
+  if (map.getLayer(MARK_GLOW)) map.removeLayer(MARK_GLOW);
+  if (map.getSource(MARK_SRC)) map.removeSource(MARK_SRC);
 
   const drawn: Feature[] = features
-    .filter((feature) => feature.ring.length >= 4)
+    .filter((feature) => feature.kind !== "mark" && feature.ring.length >= 4)
     .map((feature) => ({
       type: "Feature",
       id: feature.id,
       properties: { kind: feature.kind, selected: feature.id === selectedId ? "yes" : "no" },
       geometry: { type: "Polygon", coordinates: [closeRing(feature.ring)] },
     }));
-  if (!drawn.length) return;
+  if (drawn.length) {
+    map.addSource(OBJECT_SRC, { type: "geojson", data: { type: "FeatureCollection", features: drawn } });
+    const padHeightM = Math.max(padHeightFt * 0.3048, 3);
 
-  map.addSource(OBJECT_SRC, { type: "geojson", data: { type: "FeatureCollection", features: drawn } });
-  const padHeightM = Math.max(padHeightFt * 0.3048, 3);
+    map.addLayer({
+      id: OBJECT_FILL,
+      type: "fill",
+      source: OBJECT_SRC,
+      filter: ["==", ["get", "kind"], "parking"],
+      paint: {
+        "fill-color": "#f59e0b",
+        "fill-opacity": ["case", ["==", ["get", "selected"], "yes"], 0.55, 0.38],
+      },
+    });
+    map.addLayer({
+      id: OBJECT_EXTRUDE,
+      type: "fill-extrusion",
+      source: OBJECT_SRC,
+      filter: ["any", ["==", ["get", "kind"], "pad"], ["==", ["get", "kind"], "parking"]],
+      paint: {
+        "fill-extrusion-color": [
+          "case",
+          ["==", ["get", "kind"], "parking"],
+          "#f59e0b",
+          ["==", ["get", "selected"], "yes"],
+          "#67e8f9",
+          "#94a3b8",
+        ],
+        "fill-extrusion-height": ["case", ["==", ["get", "kind"], "pad"], padHeightM, 0.7],
+        "fill-extrusion-base": 0,
+        "fill-extrusion-opacity": 0.96,
+        "fill-extrusion-vertical-gradient": true,
+      },
+    });
+    map.addLayer({
+      id: OBJECT_GLOW,
+      type: "line",
+      source: OBJECT_SRC,
+      filter: ["==", ["get", "selected"], "yes"],
+      paint: {
+        "line-color": ["match", ["get", "kind"], "parking", "#fde68a", "pad", "#67e8f9", "#fde68a"],
+        "line-width": 10,
+        "line-opacity": 0.35,
+        "line-blur": 2,
+      },
+    });
+    map.addLayer({
+      id: OBJECT_LINE,
+      type: "line",
+      source: OBJECT_SRC,
+      paint: {
+        "line-color": ["match", ["get", "kind"], "parking", "#fde68a", "pad", "#a5f3fc", "parcel", "#22d3ee", "#ffffff"],
+        "line-width": ["case", ["==", ["get", "selected"], "yes"], 4, 1.8],
+      },
+    });
+  }
 
-  map.addLayer({
-    id: OBJECT_FILL,
-    type: "fill",
-    source: OBJECT_SRC,
-    filter: ["==", ["get", "kind"], "parking"],
-    paint: {
-      "fill-color": "#f59e0b",
-      "fill-opacity": ["case", ["==", ["get", "selected"], "yes"], 0.55, 0.38],
-    },
-  });
-  map.addLayer({
-    id: OBJECT_EXTRUDE,
-    type: "fill-extrusion",
-    source: OBJECT_SRC,
-    filter: ["any", ["==", ["get", "kind"], "pad"], ["==", ["get", "kind"], "parking"]],
-    paint: {
-      "fill-extrusion-color": [
-        "case",
-        ["==", ["get", "kind"], "parking"],
-        "#f59e0b",
-        ["==", ["get", "selected"], "yes"],
-        "#67e8f9",
-        "#94a3b8",
-      ],
-      "fill-extrusion-height": ["case", ["==", ["get", "kind"], "pad"], padHeightM, 0.7],
-      "fill-extrusion-base": 0,
-      "fill-extrusion-opacity": 0.96,
-      "fill-extrusion-vertical-gradient": true,
-    },
-  });
-  map.addLayer({
-    id: OBJECT_GLOW,
-    type: "line",
-    source: OBJECT_SRC,
-    filter: ["==", ["get", "selected"], "yes"],
-    paint: {
-      "line-color": ["match", ["get", "kind"], "parking", "#fde68a", "pad", "#67e8f9", "#fde68a"],
-      "line-width": 10,
-      "line-opacity": 0.35,
-      "line-blur": 2,
-    },
-  });
-  map.addLayer({
-    id: OBJECT_LINE,
-    type: "line",
-    source: OBJECT_SRC,
-    paint: {
-      "line-color": ["match", ["get", "kind"], "parking", "#fde68a", "pad", "#a5f3fc", "parcel", "#22d3ee", "#ffffff"],
-      "line-width": ["case", ["==", ["get", "selected"], "yes"], 4, 1.8],
-    },
-  });
+  const marks: Feature[] = [];
+  for (const feature of features) {
+    if (feature.kind !== "mark" || feature.ring.length === 0) continue;
+    marks.push(markFeature(feature.id, feature.ring, feature.id === selectedId));
+  }
+  if (draftRing.length) marks.push(markFeature("draft", draftRing, true));
+
+  if (marks.length) {
+    map.addSource(MARK_SRC, { type: "geojson", data: { type: "FeatureCollection", features: marks } });
+    map.addLayer({
+      id: MARK_GLOW,
+      type: "line",
+      source: MARK_SRC,
+      filter: ["==", ["geometry-type"], "LineString"],
+      paint: {
+        "line-color": "#f472b6",
+        "line-width": ["case", ["==", ["get", "selected"], "yes"], 10, 7],
+        "line-opacity": 0.28,
+        "line-blur": 1.4,
+      },
+    });
+    map.addLayer({
+      id: MARK_LINE,
+      type: "line",
+      source: MARK_SRC,
+      filter: ["==", ["geometry-type"], "LineString"],
+      paint: {
+        "line-color": ["case", ["==", ["get", "selected"], "yes"], "#fbcfe8", "#f472b6"],
+        "line-width": ["case", ["==", ["get", "selected"], "yes"], 3.2, 2.2],
+        "line-opacity": 0.95,
+      },
+    });
+    map.addLayer({
+      id: MARK_POINT,
+      type: "circle",
+      source: MARK_SRC,
+      filter: ["==", ["geometry-type"], "Point"],
+      paint: {
+        "circle-color": ["case", ["==", ["get", "selected"], "yes"], "#fbcfe8", "#f472b6"],
+        "circle-radius": ["case", ["==", ["get", "selected"], "yes"], 7, 5.5],
+        "circle-stroke-width": 1.5,
+        "circle-stroke-color": "#fff1f2",
+        "circle-opacity": 0.95,
+      },
+    });
+  }
+
   raiseVolumeLayers(map);
+}
+
+function markFeature(id: string, ring: LngLat[], selected: boolean): Feature {
+  const pointMark =
+    ring.length < 2 || (ring.length === 2 && ring[0][0] === ring[1][0] && ring[0][1] === ring[1][1]);
+  return {
+    type: "Feature",
+    id,
+    properties: { kind: "mark", selected: selected ? "yes" : "no" },
+    geometry: pointMark
+      ? { type: "Point", coordinates: ring[0] }
+      : { type: "LineString", coordinates: ring },
+  };
 }
 
 function raiseVolumeLayers(map: maplibregl.Map) {
@@ -184,4 +254,7 @@ function raiseVolumeLayers(map: maplibregl.Map) {
   if (map.getLayer(OBJECT_EXTRUDE)) map.moveLayer(OBJECT_EXTRUDE);
   if (map.getLayer(OBJECT_GLOW)) map.moveLayer(OBJECT_GLOW);
   if (map.getLayer(OBJECT_LINE)) map.moveLayer(OBJECT_LINE);
+  if (map.getLayer(MARK_GLOW)) map.moveLayer(MARK_GLOW);
+  if (map.getLayer(MARK_LINE)) map.moveLayer(MARK_LINE);
+  if (map.getLayer(MARK_POINT)) map.moveLayer(MARK_POINT);
 }
