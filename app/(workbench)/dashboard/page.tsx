@@ -1,3 +1,4 @@
+import { DEMO_SITE } from "@/lib/design/demo-site";
 import { WorkbenchLoader } from "@/components/workbench/workbench-loader";
 import { getCurrentUser, visibleProjectWhere } from "@/lib/auth";
 import { db } from "@/lib/db";
@@ -7,8 +8,8 @@ const LOCAL_DRAFT: DesignProject = {
   id: "local-draft",
   name: "Untitled site",
   number: "DRAFT",
-  latitude: 42.0412,
-  longitude: -87.673,
+  latitude: DEMO_SITE.latitude,
+  longitude: DEMO_SITE.longitude,
 };
 
 export default async function DashboardPage() {

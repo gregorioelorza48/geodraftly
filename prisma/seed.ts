@@ -3,6 +3,7 @@ import fs from "node:fs";
 import path from "node:path";
 import "../lib/db-env";
 import bcrypt from "bcryptjs";
+import { DEMO_SITE, offsetFromDemoSite } from "../lib/design/demo-site";
 import { getDatabaseUrl } from "../lib/db-env";
 import { putFile } from "../lib/storage";
 
@@ -87,20 +88,24 @@ async function main() {
     },
   });
 
+  const demoLocation = {
+    address: DEMO_SITE.address,
+    city: DEMO_SITE.city,
+    state: DEMO_SITE.state,
+    postalCode: DEMO_SITE.postalCode,
+    latitude: DEMO_SITE.latitude,
+    longitude: DEMO_SITE.longitude,
+  };
+
   const riverbend = await db.project.upsert({
     where: { organizationId_number: { organizationId: org.id, number: "LA-26-014" } },
-    update: {},
+    update: demoLocation,
     create: {
       organizationId: org.id,
       name: "Riverbend Park Renovation",
       number: "LA-26-014",
       client: "City of Greendale Parks Department",
-      address: "400 Riverbend Drive",
-      city: "Greendale",
-      state: "IL",
-      postalCode: "60025",
-      latitude: 42.0412,
-      longitude: -87.8214,
+      ...demoLocation,
       type: "LANDSCAPE_ARCHITECTURE",
       status: "ACTIVE",
       description:
@@ -110,18 +115,13 @@ async function main() {
 
   const oak = await db.project.upsert({
     where: { organizationId_number: { organizationId: org.id, number: "CE-26-008" } },
-    update: {},
+    update: demoLocation,
     create: {
       organizationId: org.id,
       name: "Oak Street Drainage Improvements",
       number: "CE-26-008",
       client: "Village of Oak Park Public Works",
-      address: "1100 Oak Street",
-      city: "Oak Park",
-      state: "IL",
-      postalCode: "60301",
-      latitude: 41.888,
-      longitude: -87.784,
+      ...demoLocation,
       type: "CIVIL_ENGINEERING",
       status: "ACTIVE",
       description: "Curb inlet replacement, swale regrading, and pavement restoration along Oak Street.",
@@ -176,8 +176,7 @@ async function main() {
         "EWF is thin and compacted. Exposed geotextile at the west bay. Fall zone no longer meets the original spec depth.",
       category: "EXISTING_CONDITION" as const,
       priority: "HIGH" as const,
-      latitude: 42.04135,
-      longitude: -87.8217,
+      ...offsetFromDemoSite(17, -28),
     },
     {
       id: "seed-obs-2",
@@ -186,8 +185,7 @@ async function main() {
         "Concentrated flow has cut a 6–8 inch channel through the swale invert. Mulch and fines washed onto the path.",
       category: "DRAINAGE" as const,
       priority: "HIGH" as const,
-      latitude: 42.04155,
-      longitude: -87.8211,
+      ...offsetFromDemoSite(39, 28),
     },
     {
       id: "seed-obs-3",
@@ -196,8 +194,7 @@ async function main() {
         "36-inch bur oak at the river overlook. Full crown, no included bark of concern. Protect during path reconstruction.",
       category: "TREE" as const,
       priority: "MEDIUM" as const,
-      latitude: 42.04095,
-      longitude: -87.8219,
+      ...offsetFromDemoSite(-28, -47),
     },
     {
       id: "seed-obs-4",
@@ -205,15 +202,14 @@ async function main() {
       description: "Four rotary heads along the north lawn are 1–2 inches below finished mulch grade.",
       category: "IRRIGATION" as const,
       priority: "MEDIUM" as const,
-      latitude: 42.0411,
-      longitude: -87.8213,
+      ...offsetFromDemoSite(-11, 9),
     },
   ];
 
   for (const obs of observations) {
     await db.observation.upsert({
       where: { id: obs.id },
-      update: {},
+      update: { latitude: obs.latitude, longitude: obs.longitude },
       create: {
         ...obs,
         projectId: riverbend.id,
@@ -330,15 +326,14 @@ async function main() {
     });
     await db.pinComment.upsert({
       where: { id: "seed-pin-map-1" },
-      update: {},
+      update: offsetFromDemoSite(22, -9),
       create: {
         id: "seed-pin-map-1",
         projectId: riverbend.id,
         authorId: marcus.id,
         kind: "MAP",
         body: "Can we walk this corner with Parks on the next visit? Access from Ballard looks tight.",
-        latitude: 42.0414,
-        longitude: -87.8215,
+        ...offsetFromDemoSite(22, -9),
       },
     });
   } catch (error) {

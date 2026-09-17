@@ -1,6 +1,6 @@
 import type { SiteFeature } from "./types";
 
-export const DESIGN_DRAFT_KEY = "geodraftly-design-draft";
+export const DESIGN_DRAFT_KEY = "geodraftly-design-draft-v2";
 
 export type DesignSnapshot = {
   version: 1;

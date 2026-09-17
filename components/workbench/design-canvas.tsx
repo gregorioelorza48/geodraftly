@@ -7,6 +7,7 @@ import * as THREE from "three";
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls.js";
 import { booleanPointInPolygon, point } from "@turf/turf";
 import { featureBounds, ringToPolygon } from "@/lib/design/geo";
+import { DEMO_SITE_CENTER } from "@/lib/design/demo-site";
 import { CameraControls } from "@/components/workbench/camera-controls";
 import { syncDesignObjects, syncImportOverlays } from "@/lib/design/map-overlays";
 import { workbenchStyle } from "@/lib/design/map-style";
@@ -74,8 +75,8 @@ export function DesignCanvas() {
     if (!el || mapRef.current) return;
 
     const center: LngLat = [
-      project?.longitude ?? -87.673,
-      project?.latitude ?? 42.0412,
+      project?.longitude ?? DEMO_SITE_CENTER[0],
+      project?.latitude ?? DEMO_SITE_CENTER[1],
     ];
     const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN;
     const map = new maplibregl.Map({
@@ -175,6 +176,19 @@ export function DesignCanvas() {
     // map is created once; project center is initial only
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || project?.latitude == null || project.longitude == null) return;
+    fittedRef.current = false;
+    map.easeTo({
+      center: [project.longitude, project.latitude],
+      zoom: 18,
+      pitch: 52,
+      bearing: -24,
+      duration: 900,
+    });
+  }, [project?.id, project?.latitude, project?.longitude]);
 
   useEffect(() => {
     const map = mapRef.current;

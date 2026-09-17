@@ -1,5 +1,6 @@
 import maplibregl from "maplibre-gl";
 import * as THREE from "three";
+import { DEMO_SITE_CENTER } from "./demo-site";
 import { closeRing, lngLatToLocalMeters } from "./geo";
 import type { LngLat, Ring, SiteFeature } from "./types";
 
@@ -26,7 +27,7 @@ export class DesignThreeLayer implements maplibregl.CustomLayerInterface {
   private group = new THREE.Group();
   private renderer?: THREE.WebGLRenderer;
   private transform: ModelTransform | null = null;
-  origin: LngLat = [-87.673, 42.0412];
+  origin: LngLat = [...DEMO_SITE_CENTER];
 
   constructor() {
     this.group.rotation.x = Math.PI / 2;
