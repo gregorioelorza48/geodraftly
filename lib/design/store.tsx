@@ -43,6 +43,8 @@ type DesignContextValue = {
   setCursor: (lngLat: LngLat | null) => void;
   inspectorOpen: boolean;
   setInspectorOpen: (open: boolean) => void;
+  punchList: string;
+  setPunchList: (text: string) => void;
   sourceName: string | null;
   overlays: OverlayLayer[];
   importing: string | null;
@@ -89,6 +91,7 @@ export function DesignProvider({
   const [draftRing, setDraftRing] = useState<LngLat[]>([]);
   const [cursor, setCursor] = useState<LngLat | null>(null);
   const [inspectorOpen, setInspectorOpen] = useState(true);
+  const [punchList, setPunchList] = useState("");
   const [sourceName, setSourceName] = useState<string | null>(null);
   const [overlays, setOverlays] = useState<OverlayLayer[]>([]);
   const [importing, setImporting] = useState<string | null>(null);
@@ -113,6 +116,7 @@ export function DesignProvider({
       padHeightFt,
       parkingRatio,
       sourceName,
+      punchList,
       savedAt: new Date().toISOString(),
     };
   }
@@ -123,6 +127,7 @@ export function DesignProvider({
     setPadHeightFt(snapshot.padHeightFt);
     setParkingRatio(snapshot.parkingRatio);
     setSourceName(snapshot.sourceName);
+    setPunchList(snapshot.punchList ?? "");
     setOverlays([]);
     if (snapshot.projectId) setProjectId(snapshot.projectId);
     select(snapshot.features[0]?.id ?? null);
@@ -159,7 +164,7 @@ export function DesignProvider({
   useEffect(() => {
     if (!ready) return;
     writeDraft(captureSnapshot());
-  }, [ready, features, setbackFt, padHeightFt, parkingRatio, sourceName, project?.id, project?.name]);
+  }, [ready, features, setbackFt, padHeightFt, parkingRatio, sourceName, punchList, project?.id, project?.name]);
 
   const parcel = features.find((f) => f.kind === "parcel") ?? null;
   const setback = useMemo(() => {
@@ -194,6 +199,8 @@ export function DesignProvider({
     setCursor,
     inspectorOpen,
     setInspectorOpen,
+    punchList,
+    setPunchList,
     sourceName,
     overlays,
     importing,

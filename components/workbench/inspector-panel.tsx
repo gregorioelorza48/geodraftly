@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { ChevronRight, Save, Trash2, Undo2 } from "lucide-react";
+import { ChevronRight, ClipboardList, Save, Trash2, Undo2 } from "lucide-react";
 import { useSaveProject } from "@/components/workbench/use-save-project";
 import { formatAcres, formatArea, formatFeet, parkingSpecs } from "@/lib/design/metrics";
 import { useDesign } from "@/lib/design/store";
@@ -23,6 +23,8 @@ export function InspectorPanel() {
   const {
     inspectorOpen,
     setInspectorOpen,
+    punchList,
+    setPunchList,
     metrics,
     padHeightFt,
     setPadHeightFt,
@@ -48,13 +50,32 @@ export function InspectorPanel() {
 
   if (!inspectorOpen) {
     return (
-      <button
-        type="button"
-        onClick={() => setInspectorOpen(true)}
-        className="absolute right-3 top-3 z-20 flex h-10 items-center gap-1 rounded-xl border border-zinc-800 bg-zinc-900/80 px-3 text-xs font-semibold text-zinc-300 backdrop-blur-md"
-      >
-        Inspector
-      </button>
+      <div className="fixed right-3 top-[3.75rem] z-30 flex w-80 max-w-[calc(100vw-1.5rem)] flex-col overflow-hidden rounded-2xl border border-zinc-700 bg-zinc-950/95 shadow-2xl backdrop-blur-md">
+        <div className="flex items-center justify-between gap-2 border-b border-zinc-800 px-3 py-2.5">
+          <div className="min-w-0">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/80">Report</p>
+            <h2 className="text-sm font-semibold text-zinc-100">Punch list</h2>
+          </div>
+          <button
+            type="button"
+            onClick={() => setInspectorOpen(true)}
+            className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-900/80 px-2.5 py-1.5 text-[11px] font-semibold text-zinc-300 hover:border-zinc-600 hover:text-zinc-100"
+          >
+            Inspector
+          </button>
+        </div>
+        <label className="sr-only" htmlFor="punch-list">
+          Punch list notes for the site observation report
+        </label>
+        <textarea
+          id="punch-list"
+          value={punchList}
+          onChange={(event) => setPunchList(event.target.value)}
+          placeholder="Items to include in the site observation report…"
+          rows={8}
+          className="min-h-[10rem] resize-y bg-transparent px-3 py-2.5 text-sm leading-relaxed text-zinc-100 outline-none placeholder:text-zinc-600"
+        />
+      </div>
     );
   }
 
@@ -65,14 +86,25 @@ export function InspectorPanel() {
           <p className="text-[10px] font-semibold uppercase tracking-[0.18em] text-cyan-400/80">Inspector</p>
           <h2 className="text-sm font-semibold text-zinc-100">{lot ? "Parking lot specs" : "Spatial metrics"}</h2>
         </div>
-        <button
-          type="button"
-          onClick={() => setInspectorOpen(false)}
-          className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
-          aria-label="Collapse inspector"
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            type="button"
+            onClick={() => setInspectorOpen(false)}
+            className="inline-flex items-center gap-1.5 rounded-lg px-2 py-1.5 text-[11px] font-semibold text-zinc-400 hover:bg-zinc-800 hover:text-zinc-100"
+            title="Close inspector and open punch list"
+          >
+            <ClipboardList className="h-3.5 w-3.5" />
+            Punch list
+          </button>
+          <button
+            type="button"
+            onClick={() => setInspectorOpen(false)}
+            className="rounded-lg p-1.5 text-zinc-500 hover:bg-zinc-800 hover:text-zinc-200"
+            aria-label="Close inspector"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">

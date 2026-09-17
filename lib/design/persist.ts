@@ -11,6 +11,7 @@ export type DesignSnapshot = {
   padHeightFt: number;
   parkingRatio: number;
   sourceName: string | null;
+  punchList?: string;
   savedAt: string;
 };
 
