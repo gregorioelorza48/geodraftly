@@ -3,7 +3,6 @@ import fs from "node:fs";
 import path from "node:path";
 import "../lib/db-env";
 import bcrypt from "bcryptjs";
-import { DEMO_SITE, offsetFromDemoSite } from "../lib/design/demo-site";
 import { getDatabaseUrl } from "../lib/db-env";
 import { putFile } from "../lib/storage";
 
@@ -18,14 +17,26 @@ if (/^postgres(ql)?:/i.test(databaseUrl)) {
   const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
   const schema = fs.readFileSync(schemaPath, "utf8");
   const next = schema.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
-  if (next !== schema) fs.writeFileSync(schemaPath, next);
-  execSync("npx prisma generate", { stdio: "inherit" });
+  if (next !== schema) {
+    fs.writeFileSync(schemaPath, next);
+    execSync("npx prisma generate", { stdio: "inherit", env: { ...process.env, CI: "true" } });
+  }
 }
 
 const { PrismaClient } = await import("@prisma/client");
 const db = new PrismaClient({ datasources: { db: { url: databaseUrl } } });
 
 async function main() {
+  const existing = await db.user.findUnique({
+    where: { email: "demo@geodraftly.app" },
+    select: { id: true },
+  });
+  if (existing && process.env.FORCE_SEED !== "1") {
+    console.log("Demo data already present; skipping seed.");
+    return;
+  }
+
+  const { DEMO_SITE, offsetFromDemoSite } = await import("../lib/design/demo-site");
   const passwordHash = await bcrypt.hash("demo1234", 12);
 
   const ava = await db.user.upsert({

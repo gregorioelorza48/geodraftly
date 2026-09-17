@@ -41,10 +41,13 @@ process.env.DATABASE_URL = databaseUrl;
 const schemaPath = path.join(process.cwd(), "prisma/schema.prisma");
 const schema = fs.readFileSync(schemaPath, "utf8");
 const next = schema.replace(/provider\s*=\s*"sqlite"/, 'provider = "postgresql"');
+const env = { ...process.env, CI: "true" };
+
 if (next !== schema) {
   fs.writeFileSync(schemaPath, next);
   console.log("Prisma provider set to postgresql.");
+  execSync("npx prisma generate", { stdio: "inherit", env });
 }
 
-execSync("npx prisma generate", { stdio: "inherit", env: process.env });
-execSync("npx prisma db push", { stdio: "inherit", env: process.env });
+// CI=true keeps db push non-interactive. Generate already ran at build time.
+execSync("npx prisma db push --skip-generate", { stdio: "inherit", env });

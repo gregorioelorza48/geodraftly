@@ -48,9 +48,17 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
     setError(null);
     setExportingDwg(true);
     try {
-      const { serializeDwg } = await import("@/lib/design/dwg");
       const stamp = (project?.number ?? "site").replace(/[^a-z0-9]+/gi, "-");
-      const bytes = serializeDwg(features, setback);
+      const response = await fetch("/api/export/dwg", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ features, setback }),
+      });
+      if (!response.ok) {
+        const data = (await response.json().catch(() => null)) as { error?: string } | null;
+        throw new Error(data?.error ?? "Could not write a DWG file.");
+      }
+      const bytes = new Uint8Array(await response.arrayBuffer());
       downloadBytes(`${stamp}-layout.dwg`, bytes, "application/acad");
     } catch (error) {
       setError(error instanceof Error ? error.message : "Could not write a DWG file.");
