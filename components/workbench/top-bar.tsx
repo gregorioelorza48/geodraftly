@@ -5,7 +5,7 @@ import { Download, Save, Upload } from "lucide-react";
 import { UserMenu } from "@/components/workbench/user-menu";
 import { useSaveProject } from "@/components/workbench/use-save-project";
 import { serializeDxf } from "@/lib/design/dxf";
-import { downloadText } from "@/lib/design/download";
+import { downloadBytes, downloadText } from "@/lib/design/download";
 import { toFeatureCollection } from "@/lib/design/geo";
 import { parseShapefileZip } from "@/lib/design/shapefile";
 import { useDesign } from "@/lib/design/store";
@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 export function TopBar({ cursorLabel }: { cursorLabel: string }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragOver, setDragOver] = useState(false);
+  const [exportingDwg, setExportingDwg] = useState(false);
   const { project, projects, setProjectId, features, setback, importSite, setError, setImporting, sourceName, importing } = useDesign();
   const { saveProject, status, message } = useSaveProject();
 
@@ -40,6 +41,21 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
   function exportDxf() {
     const stamp = (project?.number ?? "site").replace(/[^a-z0-9]+/gi, "-");
     downloadText(`${stamp}-layout.dxf`, serializeDxf(features, setback), "application/dxf");
+  }
+
+  async function exportDwg() {
+    setError(null);
+    setExportingDwg(true);
+    try {
+      const { serializeDwg } = await import("@/lib/design/dwg");
+      const stamp = (project?.number ?? "site").replace(/[^a-z0-9]+/gi, "-");
+      const bytes = serializeDwg(features, setback);
+      downloadBytes(`${stamp}-layout.dwg`, bytes, "application/acad");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Could not write a DWG file.");
+    } finally {
+      setExportingDwg(false);
+    }
   }
 
   return (
@@ -108,6 +124,15 @@ export function TopBar({ cursorLabel }: { cursorLabel: string }) {
       >
         <Download className="h-3.5 w-3.5" />
         Export DXF
+      </button>
+      <button
+        type="button"
+        onClick={() => void exportDwg()}
+        disabled={exportingDwg}
+        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-zinc-800 bg-zinc-900/80 px-3 text-xs font-semibold text-zinc-200 hover:border-zinc-600 disabled:opacity-60"
+      >
+        <Download className="h-3.5 w-3.5" />
+        {exportingDwg ? "Writing DWG…" : "Export DWG"}
       </button>
       <button
         type="button"
